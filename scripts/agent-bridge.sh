@@ -3,6 +3,7 @@ set -euo pipefail
 umask 077
 SESSION_NAME="agent-bridge-dev"
 PROJECT_DIR=""
+CONFIG_FILE=""
 PANE_COUNT=3
 IMPLEMENTER_RUNTIME="opencode"
 REVIEWER_RUNTIME="opencode"
@@ -13,6 +14,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --session) [[ $# -ge 2 ]] || die "--session requires a value"; SESSION_NAME="$2"; shift 2 ;;
     --project) [[ $# -ge 2 ]] || die "--project requires a value"; PROJECT_DIR="$2"; shift 2 ;;
+    --config) [[ $# -ge 2 ]] || die "--config requires a value"; CONFIG_FILE="$2"; shift 2 ;;
     --panes) [[ $# -ge 2 ]] || die "--panes requires a value"; PANE_COUNT="$2"; shift 2 ;;
     --implementer-runtime) [[ $# -ge 2 ]] || die "--implementer-runtime requires a value"; IMPLEMENTER_RUNTIME="$2"; shift 2 ;;
     --reviewer-runtime) [[ $# -ge 2 ]] || die "--reviewer-runtime requires a value"; REVIEWER_RUNTIME="$2"; shift 2 ;;
@@ -24,6 +26,15 @@ done
 [[ "$PANE_COUNT" =~ ^[3-9][0-9]*$ ]] || die "panes must be an integer >= 3"
 [[ -n "$PROJECT_DIR" ]] || PROJECT_DIR="$BRIDGE_ROOT"
 PROJECT_DIR="$(cd "$PROJECT_DIR" 2>/dev/null && pwd)" || die "project directory does not exist"
+[[ -n "$CONFIG_FILE" ]] || [[ ! -f "$PROJECT_DIR/.ai-bridge.yaml" ]] || CONFIG_FILE="$PROJECT_DIR/.ai-bridge.yaml"
+if [[ -n "$CONFIG_FILE" ]]; then
+  [[ -f "$CONFIG_FILE" ]] || die "config file does not exist: $CONFIG_FILE"
+  eval "$(python3 "$SCRIPT_DIR/config-loader.py" "$CONFIG_FILE")"
+  [[ "$SESSION_NAME" == "agent-bridge-dev" ]] && SESSION_NAME="$CONFIG_SESSION"
+  [[ "$PANE_COUNT" == 3 ]] && PANE_COUNT="$CONFIG_PANES"
+  [[ "$IMPLEMENTER_RUNTIME" == opencode ]] && IMPLEMENTER_RUNTIME="$CONFIG_IMPLEMENTER_RUNTIME"
+  [[ "$REVIEWER_RUNTIME" == opencode ]] && REVIEWER_RUNTIME="$CONFIG_REVIEWER_RUNTIME"
+fi
 RUNTIME_DIR="$PROJECT_DIR/.ai-bridge"
 mkdir -p "$RUNTIME_DIR/mailbox" "$RUNTIME_DIR/state"
 if tmux has-session -t "$SESSION_NAME" 2>/dev/null; then

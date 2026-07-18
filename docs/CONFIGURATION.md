@@ -1,7 +1,7 @@
 # Configuration
 
 The example configuration is `.ai-bridge.example.yaml`. Copy it to the project as
-`.ai-bridge.yaml` when configuration support is enabled. Keep personal overrides in
+`.ai-bridge.yaml` when configuration support is needed. Keep personal overrides in
 `.ai-bridge.local.yaml`; both local runtime files should remain uncommitted.
 
 ## Project
@@ -25,3 +25,6 @@ metacharacters into runtime names or session names.
 
 `mailbox` is the only completion notification channel. Agents write event files under
 `.ai-bridge/mailbox/`; the supervisor records lifecycle events under `.ai-bridge/state/`.
+
+The launcher automatically reads `.ai-bridge.yaml`. Use `--config PATH` for another file.
+Explicit CLI options override configuration values.
