@@ -2,7 +2,13 @@
 
 ## 導入
 
-在目標專案執行：
+先在 Agent Bridge 專案內執行一次：
+
+```bash
+./install.sh
+```
+
+安裝完成後，進入目標專案執行：
 
 ```bash
 agent-bridge setup

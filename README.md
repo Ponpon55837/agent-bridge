@@ -9,7 +9,7 @@ Agent Bridge 是一套可導入不同專案的多代理協作工具。它使用 
 - Claude
 - 其他可由 shell 啟動的 CLI 工具
 
-## 最快開始
+## 第一次安裝
 
 先確認環境：
 
@@ -18,29 +18,39 @@ tmux -V
 python3 --version
 ```
 
-進入要導入的專案目錄：
+先取得 Agent Bridge 並進入它的目錄。這個步驟只需要做一次：
+
+```bash
+git clone <agent-bridge-repository>
+cd agent-bridge
+./install.sh
+```
+
+安裝程式會把 `agent-bridge` 放到 `~/.local/bin`。如果終端機提示 PATH 尚未設定，依照提示把路徑加入 shell 設定檔。
+
+確認安裝：
+
+```bash
+agent-bridge doctor
+```
+
+## 導入專案
+
+之後不需要再輸入 Agent Bridge 的完整路徑。進入要導入的專案目錄：
 
 ```bash
 cd /你的專案路徑
 ```
 
-第一次導入：
+第一次導入專案：
 
 ```bash
-/path/to/agent-bridge/scripts/agent-bridge setup
+agent-bridge setup
 ```
 
 啟動 workflow：
 
 ```bash
-/path/to/agent-bridge/scripts/agent-bridge up
-```
-
-如果已將 `scripts/agent-bridge` 加入 `PATH`，之後可以簡化成：
-
-```bash
-cd /你的專案路徑
-agent-bridge setup
 agent-bridge up
 ```
 
@@ -199,16 +209,17 @@ agent-bridge uninstall --project /你的專案路徑 --force
 
 ### 找不到 `agent-bridge`
 
-使用完整路徑：
+先在 Agent Bridge 專案目錄重新執行：
 
 ```bash
-/path/to/agent-bridge/scripts/agent-bridge doctor
+./install.sh
 ```
 
-或將腳本加入 PATH：
+如果仍找不到，確認：
 
 ```bash
-export PATH="/path/to/agent-bridge/scripts:$PATH"
+echo "$PATH"
+ls -l "$HOME/.local/bin/agent-bridge"
 ```
 
 ### session 已存在
