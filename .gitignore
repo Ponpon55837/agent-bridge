@@ -1,0 +1,6 @@
+.ai-bridge/
+.ai/
+.ai-bridge.local.yaml
+.mcp.json
+*.swp
+.DS_Store

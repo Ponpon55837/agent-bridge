@@ -1,0 +1,21 @@
+project:
+  name: example
+  root: .
+
+session:
+  name: agent-bridge-dev
+  pane_count: 3
+
+agents:
+  - id: implementer
+    runtime: opencode
+    pane: 1
+    role: implementation
+  - id: reviewer
+    runtime: claude
+    pane: 2
+    role: review
+
+workflow:
+  notification: mailbox
+  require_local_verification: true
