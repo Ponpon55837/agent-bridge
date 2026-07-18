@@ -13,6 +13,7 @@ PANE_COUNT=3
 IMPLEMENTER_RUNTIME="opencode"
 REVIEWER_RUNTIME="opencode"
 ORCHESTRATOR_RUNTIME="codex"
+PRESET=""
 ATTACH=0
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BRIDGE_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -26,6 +27,7 @@ while [[ $# -gt 0 ]]; do
     --implementer-runtime) [[ $# -ge 2 ]] || die "--implementer-runtime requires a value"; IMPLEMENTER_RUNTIME="$2"; shift 2 ;;
     --reviewer-runtime) [[ $# -ge 2 ]] || die "--reviewer-runtime requires a value"; REVIEWER_RUNTIME="$2"; shift 2 ;;
     --orchestrator-runtime) [[ $# -ge 2 ]] || die "--orchestrator-runtime requires a value"; ORCHESTRATOR_RUNTIME="$2"; shift 2 ;;
+    --preset) [[ $# -ge 2 ]] || die "--preset requires a value"; PRESET="$2"; shift 2 ;;
     --detach) ATTACH=0; shift ;;
     --attach) ATTACH=1; shift ;;
     -h|--help) echo "Usage: $0 [--session NAME] [--project DIR]"; exit 0 ;;
@@ -51,6 +53,12 @@ if [[ -n "$CONFIG_FILE" ]]; then
   [[ "$IMPLEMENTER_ROLE" == implementation ]] && IMPLEMENTER_ROLE="$CONFIG_IMPLEMENTER_ROLE"
   [[ "$REVIEWER_ROLE" == review ]] && REVIEWER_ROLE="$CONFIG_REVIEWER_ROLE"
 fi
+case "$PRESET" in
+  "") ;;
+  standard) ORCHESTRATOR_RUNTIME=codex; IMPLEMENTER_RUNTIME=opencode; REVIEWER_RUNTIME=opencode ;;
+  review) ORCHESTRATOR_RUNTIME=codex; IMPLEMENTER_RUNTIME=opencode; REVIEWER_RUNTIME=claude ;;
+  *) die "unsupported preset: $PRESET (use standard or review)" ;;
+esac
 command -v tmux >/dev/null 2>&1 || die "required command not installed: tmux. Run: agent-bridge doctor"
 command -v python3 >/dev/null 2>&1 || die "required command not installed: python3. Run: agent-bridge doctor"
 command -v node >/dev/null 2>&1 || die "required command not installed: node (Node.js 18+ required by tmux-bridge-mcp). Run: agent-bridge doctor"
@@ -68,6 +76,12 @@ command -v "$implementer_cmd" >/dev/null 2>&1 || die "runtime not installed: $IM
 command -v "$reviewer_cmd" >/dev/null 2>&1 || die "runtime not installed: $REVIEWER_RUNTIME. Run: agent-bridge doctor"
 RUNTIME_DIR="$PROJECT_DIR/.ai-bridge"
 mkdir -p "$RUNTIME_DIR/mailbox" "$RUNTIME_DIR/state"
+created_session=0
+cleanup_failed_start() {
+  if (( created_session )); then
+    tmux kill-session -t "$SESSION_NAME" 2>/dev/null || true
+  fi
+}
 if tmux has-session -t "$SESSION_NAME" 2>/dev/null; then
   echo "Session '$SESSION_NAME' already exists."
   echo "Attach with: tmux attach -t $SESSION_NAME"
@@ -80,6 +94,8 @@ if tmux has-session -t "$SESSION_NAME" 2>/dev/null; then
   exit 0
 fi
 tmux new-session -d -s "$SESSION_NAME" -c "$PROJECT_DIR"
+created_session=1
+trap cleanup_failed_start EXIT
 tmux split-window -h -t "$SESSION_NAME:0" -c "$PROJECT_DIR"
 tmux split-window -v -t "$SESSION_NAME:0.0" -c "$PROJECT_DIR"
 for ((pane=3; pane<PANE_COUNT; pane++)); do tmux split-window -v -t "$SESSION_NAME:0.0" -c "$PROJECT_DIR"; done
@@ -107,5 +123,7 @@ printf 'session_started %s project=%s\n' "$(date +%s)" "$PROJECT_DIR" >> "$RUNTI
 echo "READY session=$SESSION_NAME project=$PROJECT_DIR panes=$PANE_COUNT orchestrator=$ORCHESTRATOR_RUNTIME implementer=$IMPLEMENTER_RUNTIME reviewer=$REVIEWER_RUNTIME"
 echo "Attach with: tmux attach -t $SESSION_NAME"
 if (( ATTACH )); then
+  trap - EXIT
   exec tmux attach -t "$SESSION_NAME"
 fi
+trap - EXIT

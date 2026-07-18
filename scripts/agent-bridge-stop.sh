@@ -10,6 +10,15 @@ while [[ $# -gt 0 ]]; do
 done
 [[ "$SESSION_NAME" =~ ^[A-Za-z0-9_-]+$ ]] || { echo "invalid session" >&2; exit 1; }
 PROJECT_DIR="$(cd "$PROJECT_DIR" && pwd)"; PID_FILE="$PROJECT_DIR/.ai-bridge/state/supervisor.pid"
-if [[ -f "$PID_FILE" ]]; then kill "$(<"$PID_FILE")" 2>/dev/null || true; rm -f "$PID_FILE"; fi
+if [[ -f "$PID_FILE" ]]; then
+  supervisor_pid="$(<"$PID_FILE")"
+  if [[ "$supervisor_pid" =~ ^[0-9]+$ ]]; then
+    supervisor_command="$(ps -p "$supervisor_pid" -o command= 2>/dev/null || true)"
+    if [[ "$supervisor_command" == *"supervisor.sh"* && "$supervisor_command" == *"--session $SESSION_NAME"* && "$supervisor_command" == *"--project $PROJECT_DIR"* ]]; then
+      kill "$supervisor_pid" 2>/dev/null || true
+    fi
+  fi
+  rm -f "$PID_FILE"
+fi
 tmux kill-session -t "$SESSION_NAME" 2>/dev/null || true
 echo "STOPPED session=$SESSION_NAME"

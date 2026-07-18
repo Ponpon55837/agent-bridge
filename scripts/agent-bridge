@@ -19,14 +19,16 @@ Commands:
   start       Create or reuse a detached tmux workflow session
   install     Add runtime ignore rules to a project
   status      Show session and runtime state
+  logs        Show supervisor and handoff logs
   stop        Stop the supervisor and tmux session
+  restart     Stop and start the workflow again
   sessions    List sessions and mark the current one
   switch      Attach to or switch to a session
   rename      Rename a session safely
   kill        Kill one exact session (confirmation required)
   uninstall   Dry-run removal; use --force to remove runtime state
   validate    Run shell syntax and configuration checks
-  (start also accepts --panes, --implementer-runtime, and --reviewer-runtime)
+  (start also accepts --panes, --preset, --implementer-runtime, and --reviewer-runtime)
   help        Show this help
 EOF
 }
@@ -45,7 +47,7 @@ case "$command" in
   up)
     project="$(pwd)"; session=""; extra=()
     [[ -t 0 && -t 1 ]] && extra+=(--attach)
-    while [[ $# -gt 0 ]]; do case "$1" in --project) project="$2"; shift 2;; --session) session="$2"; extra+=(--session "$session"); shift 2;; --implementer-runtime|--reviewer-runtime|--orchestrator-runtime|--panes) extra+=("$1" "$2"); shift 2;; *) echo "unknown option: $1" >&2; exit 1;; esac; done
+    while [[ $# -gt 0 ]]; do case "$1" in --project) project="$2"; shift 2;; --session) session="$2"; extra+=(--session "$session"); shift 2;; --implementer-runtime|--reviewer-runtime|--orchestrator-runtime|--panes|--preset) extra+=("$1" "$2"); shift 2;; *) echo "unknown option: $1" >&2; exit 1;; esac; done
     "$ROOT/scripts/agent-bridge-install.sh" --project "$project"
     if [[ -z "$session" && -f "$project/.ai-bridge.yaml" ]]; then
       session="$(python3 "$ROOT/scripts/config-loader.py" "$project/.ai-bridge.yaml" | sed -n "s/^CONFIG_SESSION='\?\([^']*\)'\?$/\1/p")"
@@ -97,6 +99,33 @@ case "$command" in
   start) exec "$ROOT/scripts/agent-bridge.sh" "$@";;
   install) exec "$ROOT/scripts/agent-bridge-install.sh" "$@";;
   stop) exec "$ROOT/scripts/agent-bridge-stop.sh" "$@";;
+  restart)
+    project="$(pwd)"; session=""; restart_args=()
+    while [[ $# -gt 0 ]]; do
+      case "$1" in
+        --project) project="$2"; restart_args+=(--project "$2"); shift 2;;
+        --session) session="$2"; restart_args+=(--session "$2"); shift 2;;
+        --implementer-runtime|--reviewer-runtime|--orchestrator-runtime|--panes|--preset)
+          restart_args+=("$1" "$2"); shift 2;;
+        --detach|--attach) restart_args+=("$1"); shift;;
+        *) echo "unknown option: $1" >&2; exit 1;;
+      esac
+    done
+    if [[ -z "$session" && -f "$project/.ai-bridge.yaml" ]]; then
+      session="$(python3 "$ROOT/scripts/config-loader.py" "$project/.ai-bridge.yaml" | sed -n "s/^CONFIG_SESSION='\?\([^']*\)'\?$/\1/p")"
+      [[ -n "$session" ]] && restart_args+=(--session "$session")
+    fi
+    if [[ -z "$session" ]]; then
+      session="$(basename "$(cd "$project" && pwd)")-ai"
+      restart_args+=(--session "$session")
+    fi
+    if [[ -n "$session" ]]; then
+      "$ROOT/scripts/agent-bridge-stop.sh" --project "$project" --session "$session"
+    else
+      "$ROOT/scripts/agent-bridge-stop.sh" --project "$project"
+    fi
+    exec "$ROOT/scripts/agent-bridge" up "${restart_args[@]}"
+    ;;
   uninstall) exec "$ROOT/scripts/agent-bridge-uninstall.sh" "$@";;
   status)
     session="agent-bridge-dev"; project="$(pwd)"
@@ -104,9 +133,19 @@ case "$command" in
     project="$(cd "$project" && pwd)"; runtime="$project/.ai-bridge"
     echo "project=$project"; echo "session=$session"
     if tmux has-session -t "$session" 2>/dev/null; then echo "tmux=running"; tmux list-panes -t "$session" -F 'pane=#{pane_index} title=#{pane_title} command=#{pane_current_command}'; else echo "tmux=stopped"; fi
-    if [[ -f "$runtime/state/supervisor.pid" ]] && kill -0 "$(<"$runtime/state/supervisor.pid")" 2>/dev/null; then echo "supervisor=running pid=$(<"$runtime/state/supervisor.pid")"; else echo "supervisor=stopped"; fi
+    if [[ -f "$runtime/state/supervisor.pid" ]] && kill -0 "$(<"$runtime/state/supervisor.pid")" 2>/dev/null; then
+      supervisor_pid="$(<"$runtime/state/supervisor.pid")"
+      if [[ -f "$runtime/state/.supervisor-heartbeat" ]] && find "$runtime/state/.supervisor-heartbeat" -mmin -1 -print -quit 2>/dev/null | grep -q .; then
+        echo "supervisor=running pid=$supervisor_pid health=healthy"
+      else
+        echo "supervisor=running pid=$supervisor_pid health=stale"
+      fi
+    else
+      echo "supervisor=stopped"
+    fi
     echo "runtime=$runtime"; echo "mailbox_files=$(find "$runtime/mailbox" -type f 2>/dev/null | wc -l | tr -d ' ')"
     ;;
+  logs) exec "$ROOT/scripts/agent-bridge-logs.sh" "$@";;
   sessions) exec "$ROOT/scripts/agent-bridge-sessions.sh" "$@";;
   switch) exec "$ROOT/scripts/agent-bridge-switch.sh" "$@";;
   rename) exec "$ROOT/scripts/agent-bridge-rename.sh" "$@";;

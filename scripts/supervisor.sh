@@ -19,12 +19,22 @@ done
 [[ -n "$PROJECT_DIR" ]] || PROJECT_DIR="$(pwd)"
 PROJECT_DIR="$(cd "$PROJECT_DIR" 2>/dev/null && pwd)" || exit 1
 RUNTIME_DIR="$PROJECT_DIR/.ai-bridge"; MAILBOX_DIR="$RUNTIME_DIR/mailbox"; STATE_DIR="$RUNTIME_DIR/state"
-mkdir -p "$MAILBOX_DIR" "$STATE_DIR"; EVENTS_LOG="$STATE_DIR/events.log"
+mkdir -p "$MAILBOX_DIR" "$STATE_DIR"; EVENTS_LOG="$STATE_DIR/events.log"; HEARTBEAT="$STATE_DIR/.supervisor-heartbeat"
+cleanup_supervisor() { rm -f "$HEARTBEAT"; }
+trap cleanup_supervisor EXIT
 record_event() { printf '%s %s\n' "$(date +%s)" "$1" >> "$EVENTS_LOG"; }
 write_mailbox() {
   local agent_id="$1" status="$2" content="$3" ts file tmp
   ts="$(date +%s)"; file="$MAILBOX_DIR/${agent_id}.${status}.${ts}.md"; tmp="$file.tmp.$$"
   printf '%s\n' "$content" > "$tmp" && mv -f "$tmp" "$file"; record_event "mailbox: wrote $file"
+  write_handoff_metadata "$agent_id" "$status" "$ts" "$file"
+}
+write_handoff_metadata() {
+  local agent_id="$1" status="$2" ts="$3" mailbox_file="$4" file tmp
+  file="$mailbox_file.json"; tmp="$file.tmp.$$"
+  python3 -c 'import json,sys; print(json.dumps({"agent":sys.argv[1],"status":sys.argv[2],"timestamp":int(sys.argv[3]),"mailbox_file":sys.argv[4]}, ensure_ascii=False))' \
+    "$agent_id" "$status" "$ts" "$mailbox_file" > "$tmp" && mv -f "$tmp" "$file"
+  record_event "handoff: wrote $file"
 }
 notify_pane() {
   local pane="$1" message="$2"
@@ -40,6 +50,7 @@ hash_text() {
 last_hash1=""; last_hash2=""; notified_hash1=""; notified_hash2=""
 record_event "supervisor_started session=$SESSION_NAME project=$PROJECT_DIR"
 while tmux has-session -t "$SESSION_NAME" 2>/dev/null; do
+  touch "$HEARTBEAT"
   pane1="$(tmux capture-pane -t "$SESSION_NAME:0.$IMPLEMENTER_PANE" -p -S -500 2>/dev/null || true)"
   pane2="$(tmux capture-pane -t "$SESSION_NAME:0.$REVIEWER_PANE" -p -S -500 2>/dev/null || true)"
   hash1="$(printf '%s' "$pane1" | hash_text | cut -d' ' -f1)"; hash2="$(printf '%s' "$pane2" | hash_text | cut -d' ' -f1)"
