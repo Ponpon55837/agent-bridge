@@ -7,6 +7,8 @@ cd agent-bridge
 ./install.sh
 ```
 
+安裝完成後請關閉目前終端機，再開一個新的終端機；這樣系統才會找到 `agent-bridge` 指令。
+
 之後進入任何要導入的專案，日常只需要四個指令：
 
 ```bash

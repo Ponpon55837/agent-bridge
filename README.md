@@ -26,7 +26,7 @@ cd agent-bridge
 ./install.sh
 ```
 
-安裝程式會把 `agent-bridge` 放到 `~/.local/bin`。如果終端機提示 PATH 尚未設定，依照提示把路徑加入 shell 設定檔。
+安裝程式會把 `agent-bridge` 放到 `~/.local/bin`，並自動設定 zsh、bash 或一般 shell 的啟動設定。安裝完成後請關閉目前終端機，再開一個新的終端機。
 
 確認安裝：
 
