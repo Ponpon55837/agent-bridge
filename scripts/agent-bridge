@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SOURCE="${BASH_SOURCE[0]}"
+while [[ -h "$SOURCE" ]]; do
+  SOURCE_DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+  LINK="$(readlink "$SOURCE")"
+  [[ "$LINK" == /* ]] && SOURCE="$LINK" || SOURCE="$SOURCE_DIR/$LINK"
+done
+ROOT="$(cd -P "$(dirname "$SOURCE")/.." && pwd)"
 usage() {
   cat <<'EOF'
 Usage: agent-bridge <command> [options]
