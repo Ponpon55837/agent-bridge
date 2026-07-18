@@ -7,6 +7,7 @@ Usage: agent-bridge <command> [options]
 
 Commands:
   start       Create or reuse a tmux workflow session
+  install     Add runtime ignore rules to a project
   status      Show session and runtime state
   stop        Stop the supervisor and tmux session
   sessions    List sessions and mark the current one
@@ -15,12 +16,14 @@ Commands:
   kill        Kill one exact session (confirmation required)
   uninstall   Dry-run removal; use --force to remove runtime state
   validate    Run shell syntax and configuration checks
+  (start also accepts --panes, --implementer-runtime, and --reviewer-runtime)
   help        Show this help
 EOF
 }
 command="${1:-help}"; shift || true
 case "$command" in
   start) exec "$ROOT/scripts/agent-bridge.sh" "$@";;
+  install) exec "$ROOT/scripts/agent-bridge-install.sh" "$@";;
   stop) exec "$ROOT/scripts/agent-bridge-stop.sh" "$@";;
   uninstall) exec "$ROOT/scripts/agent-bridge-uninstall.sh" "$@";;
   status)

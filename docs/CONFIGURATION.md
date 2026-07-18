@@ -12,8 +12,8 @@ and runtime state are created.
 ## Session
 
 `session.name` must contain only letters, numbers, `_`, and `-`. Use a unique name per
-project and per concurrent workflow. `pane_count` is currently three; larger layouts
-are part of the next adapter milestone.
+project and per concurrent workflow. `pane_count` defaults to three and can be increased
+with `--panes`; pane 0 is the orchestrator, pane 1 the implementer, and pane 2 the reviewer.
 
 ## Agents
 
