@@ -130,22 +130,33 @@ case "$command" in
   recover) exec "$ROOT/scripts/agent-bridge-recover.sh" "$@";;
   uninstall) exec "$ROOT/scripts/agent-bridge-uninstall.sh" "$@";;
   status)
-    session="agent-bridge-dev"; project="$(pwd)"
-    while [[ $# -gt 0 ]]; do case "$1" in --session) session="$2"; shift 2;; --project) project="$2"; shift 2;; *) echo "unknown option: $1" >&2; exit 1;; esac; done
+    session="agent-bridge-dev"; project="$(pwd)"; output_json=0
+    while [[ $# -gt 0 ]]; do case "$1" in --session) session="$2"; shift 2;; --project) project="$2"; shift 2;; --json) output_json=1; shift;; *) echo "unknown option: $1" >&2; exit 1;; esac; done
     project="$(cd "$project" && pwd)"; runtime="$project/.ai-bridge"
-    echo "project=$project"; echo "session=$session"
-    if tmux has-session -t "$session" 2>/dev/null; then echo "tmux=running"; tmux list-panes -t "$session" -F 'pane=#{pane_index} title=#{pane_title} command=#{pane_current_command}'; else echo "tmux=stopped"; fi
+    tmux_state=stopped
+    if tmux has-session -t "$session" 2>/dev/null; then tmux_state=running; fi
+    supervisor_state=stopped; supervisor_health=stopped; supervisor_pid=""
     if [[ -f "$runtime/state/supervisor.pid" ]] && kill -0 "$(<"$runtime/state/supervisor.pid")" 2>/dev/null; then
       supervisor_pid="$(<"$runtime/state/supervisor.pid")"
       if [[ -f "$runtime/state/.supervisor-heartbeat" ]] && find "$runtime/state/.supervisor-heartbeat" -mmin -1 -print -quit 2>/dev/null | grep -q .; then
-        echo "supervisor=running pid=$supervisor_pid health=healthy"
+        supervisor_state=running; supervisor_health=healthy
       else
-        echo "supervisor=running pid=$supervisor_pid health=stale"
+        supervisor_state=running; supervisor_health=stale
       fi
-    else
-      echo "supervisor=stopped"
     fi
-    echo "runtime=$runtime"; echo "mailbox_files=$(find "$runtime/mailbox" -type f 2>/dev/null | wc -l | tr -d ' ')"
+    mailbox_files=0
+    if [[ -d "$runtime/mailbox" ]]; then
+      mailbox_files="$(find "$runtime/mailbox" -type f 2>/dev/null | wc -l | tr -d ' ')"
+    fi
+    if (( output_json )); then
+      python3 -c 'import json,sys; print(json.dumps({"project":sys.argv[1],"session":sys.argv[2],"tmux":sys.argv[3],"supervisor":sys.argv[4],"health":sys.argv[5],"supervisor_pid":int(sys.argv[6]) if sys.argv[6] else None,"runtime":sys.argv[7],"mailbox_files":int(sys.argv[8])}, ensure_ascii=False))' \
+        "$project" "$session" "$tmux_state" "$supervisor_state" "$supervisor_health" "$supervisor_pid" "$runtime" "$mailbox_files"
+      exit 0
+    fi
+    echo "project=$project"; echo "session=$session"
+    if [[ "$tmux_state" == running ]]; then echo "tmux=running"; tmux list-panes -t "$session" -F 'pane=#{pane_index} title=#{pane_title} command=#{pane_current_command}'; else echo "tmux=stopped"; fi
+    if [[ "$supervisor_state" == running ]]; then echo "supervisor=running pid=$supervisor_pid health=$supervisor_health"; else echo "supervisor=stopped"; fi
+    echo "runtime=$runtime"; echo "mailbox_files=$mailbox_files"
     ;;
   logs) exec "$ROOT/scripts/agent-bridge-logs.sh" "$@";;
   sessions) exec "$ROOT/scripts/agent-bridge-sessions.sh" "$@";;

@@ -23,6 +23,7 @@ handoff_json="$tmp_config_dir/agent-1.done.1.md.json"
 printf '%s\n' '{"schema_version":1,"type":"agent_handoff","agent":"agent-1","status":"done","timestamp":1,"mailbox_file":"agent-1.done.1.md","summary":null,"changed_files":[],"verification":null,"next_action":null}' > "$handoff_json"
 python3 "$ROOT/scripts/validate-handoff.py" "$handoff_json" >/dev/null
 mkdir -p "$tmp_config_dir/.ai-bridge/state"
+"$ROOT/scripts/agent-bridge" status --project "$tmp_config_dir" --session local-session --json | python3 -c 'import json,sys; data=json.load(sys.stdin); assert data["session"] == "local-session" and data["tmux"] == "stopped"'
 "$ROOT/tests/integration-tmux.sh"
 if "$ROOT/scripts/agent-bridge-recover.sh" --project "$tmp_config_dir" >/tmp/agent-bridge-recover-check 2>&1; then
   echo "missing runtime recovery check unexpectedly succeeded" >&2; exit 1
