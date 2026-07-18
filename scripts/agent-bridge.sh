@@ -4,6 +4,10 @@ umask 077
 SESSION_NAME="agent-bridge-dev"
 PROJECT_DIR=""
 CONFIG_FILE=""
+IMPLEMENTER_PANE=1
+REVIEWER_PANE=2
+IMPLEMENTER_ROLE="implementation"
+REVIEWER_ROLE="review"
 PANE_COUNT=3
 IMPLEMENTER_RUNTIME="opencode"
 REVIEWER_RUNTIME="opencode"
@@ -34,7 +38,12 @@ if [[ -n "$CONFIG_FILE" ]]; then
   [[ "$PANE_COUNT" == 3 ]] && PANE_COUNT="$CONFIG_PANES"
   [[ "$IMPLEMENTER_RUNTIME" == opencode ]] && IMPLEMENTER_RUNTIME="$CONFIG_IMPLEMENTER_RUNTIME"
   [[ "$REVIEWER_RUNTIME" == opencode ]] && REVIEWER_RUNTIME="$CONFIG_REVIEWER_RUNTIME"
+  [[ "$IMPLEMENTER_PANE" == 1 ]] && IMPLEMENTER_PANE="$CONFIG_IMPLEMENTER_PANE"
+  [[ "$REVIEWER_PANE" == 2 ]] && REVIEWER_PANE="$CONFIG_REVIEWER_PANE"
+  [[ "$IMPLEMENTER_ROLE" == implementation ]] && IMPLEMENTER_ROLE="$CONFIG_IMPLEMENTER_ROLE"
+  [[ "$REVIEWER_ROLE" == review ]] && REVIEWER_ROLE="$CONFIG_REVIEWER_ROLE"
 fi
+[[ "$IMPLEMENTER_PANE" =~ ^[1-9][0-9]*$ && "$REVIEWER_PANE" =~ ^[1-9][0-9]*$ ]] || die "agent pane must be a positive integer"
 RUNTIME_DIR="$PROJECT_DIR/.ai-bridge"
 mkdir -p "$RUNTIME_DIR/mailbox" "$RUNTIME_DIR/state"
 if tmux has-session -t "$SESSION_NAME" 2>/dev/null; then
@@ -47,18 +56,18 @@ tmux split-window -v -t "$SESSION_NAME:0.0" -c "$PROJECT_DIR"
 for ((pane=3; pane<PANE_COUNT; pane++)); do tmux split-window -v -t "$SESSION_NAME:0.0" -c "$PROJECT_DIR"; done
 tmux select-layout -t "$SESSION_NAME:0" tiled
 tmux select-pane -t "$SESSION_NAME:0.0" -T orchestrator
-tmux select-pane -t "$SESSION_NAME:0.1" -T implementer
-tmux select-pane -t "$SESSION_NAME:0.2" -T reviewer
+tmux select-pane -t "$SESSION_NAME:0.$IMPLEMENTER_PANE" -T "$IMPLEMENTER_ROLE"
+tmux select-pane -t "$SESSION_NAME:0.$REVIEWER_PANE" -T "$REVIEWER_ROLE"
 # Pane 0 is intentionally untouched; start the orchestrator CLI manually there.
 implementer_cmd="$("$SCRIPT_DIR/runtime-adapter.sh" "$IMPLEMENTER_RUNTIME")"
 reviewer_cmd="$("$SCRIPT_DIR/runtime-adapter.sh" "$REVIEWER_RUNTIME")"
 command -v "$implementer_cmd" >/dev/null 2>&1 || die "runtime not installed: $IMPLEMENTER_RUNTIME"
 command -v "$reviewer_cmd" >/dev/null 2>&1 || die "runtime not installed: $REVIEWER_RUNTIME"
-tmux send-keys -t "$SESSION_NAME:0.1" "$implementer_cmd" Enter
-tmux send-keys -t "$SESSION_NAME:0.2" "$reviewer_cmd" Enter
+tmux send-keys -t "$SESSION_NAME:0.$IMPLEMENTER_PANE" "$implementer_cmd" Enter
+tmux send-keys -t "$SESSION_NAME:0.$REVIEWER_PANE" "$reviewer_cmd" Enter
 SUPERVISOR_SCRIPT="$SCRIPT_DIR/supervisor.sh"
 if [[ -x "$SUPERVISOR_SCRIPT" ]]; then
-  "$SUPERVISOR_SCRIPT" --session "$SESSION_NAME" --project "$PROJECT_DIR" >"$RUNTIME_DIR/state/supervisor.log" 2>&1 &
+  "$SUPERVISOR_SCRIPT" --session "$SESSION_NAME" --project "$PROJECT_DIR" --implementer-pane "$IMPLEMENTER_PANE" --reviewer-pane "$REVIEWER_PANE" >"$RUNTIME_DIR/state/supervisor.log" 2>&1 &
   echo $! > "$RUNTIME_DIR/state/supervisor.pid"
 fi
 printf 'session_started %s project=%s\n' "$(date +%s)" "$PROJECT_DIR" >> "$RUNTIME_DIR/state/events.log"

@@ -23,6 +23,6 @@ workflow:
   notification: mailbox
 ```
 
-目前 launcher 會讀取 session 名稱、pane 數量，以及 implementer/reviewer runtime。CLI 明確傳入的參數優先於設定檔。
+launcher 會讀取 project root、session 名稱、pane 數量、agent pane、role，以及 implementer/reviewer runtime。CLI 明確傳入的參數優先於設定檔。pane 0 保留給總控，不會由 launcher 注入指令。
 
 可用 runtime：`codex`、`opencode`、`claude`、`shell`。
