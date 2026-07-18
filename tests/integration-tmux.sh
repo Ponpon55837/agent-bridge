@@ -13,6 +13,10 @@ cleanup() {
 trap cleanup EXIT
 
 "$ROOT/scripts/agent-bridge-install.sh" --project "$TMP_PROJECT" --copy-config >/dev/null
+if find "$TMP_PROJECT/.ai-bridge" -type d -perm -007 -print -quit 2>/dev/null | grep -q .; then
+  echo "runtime directory is accessible by group or others" >&2
+  exit 1
+fi
 "$ROOT/scripts/agent-bridge.sh" --project "$TMP_PROJECT" --session "$SESSION" \
   --orchestrator-runtime none --implementer-runtime shell --reviewer-runtime shell --detach >/dev/null
 sleep 1

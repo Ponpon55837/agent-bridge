@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+umask 077
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PROJECT_DIR=""; COPY_CONFIG=0; REFRESH_CONFIG=0
 while [[ $# -gt 0 ]]; do

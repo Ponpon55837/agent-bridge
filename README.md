@@ -282,6 +282,8 @@ agent-bridge uninstall --project /path/to/your-project --force
 
 所有 pane 都不得把 API token、密碼、私鑰、環境變數內容或其他敏感認證資訊寫入 mailbox、log 或 handoff 訊息。Agent runtime 可能讀寫專案並執行命令，請只在可信任的專案與設定下使用。
 
+runtime 目錄在初始化時會以使用者私有權限建立；mailbox、PID 與 log 不應被其他本機使用者讀取。若 runtime 目錄是由舊版本建立，請檢查並視需要手動收緊其檔案權限。
+
 設定檔、環境變數、parser、runtime 與啟動參數屬於使用者可自訂內容。若自行修改腳本、parser、設定格式或 runtime 行為，相關安全風險由修改者自行負責；`.gitignore` 也不是 secrets 保護機制。
 
 ## 疑難排解
