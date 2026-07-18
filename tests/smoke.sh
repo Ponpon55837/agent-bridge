@@ -19,6 +19,9 @@ printf 'session:\n  name: local-session\n' > "$tmp_config_dir/.ai-bridge.local.y
 if ! python3 "$ROOT/scripts/config-loader.py" "$tmp_config_dir/.ai-bridge.yaml" | grep -qx "CONFIG_SESSION=local-session"; then
   echo "local config override failed" >&2; exit 1
 fi
+handoff_json="$tmp_config_dir/agent-1.done.1.md.json"
+printf '%s\n' '{"schema_version":1,"type":"agent_handoff","agent":"agent-1","status":"done","timestamp":1,"mailbox_file":"agent-1.done.1.md","summary":null,"changed_files":[],"verification":null,"next_action":null}' > "$handoff_json"
+python3 "$ROOT/scripts/validate-handoff.py" "$handoff_json" >/dev/null
 mkdir -p "$tmp_config_dir/.ai-bridge/state"
 "$ROOT/tests/integration-tmux.sh"
 if "$ROOT/scripts/agent-bridge-recover.sh" --project "$tmp_config_dir" >/tmp/agent-bridge-recover-check 2>&1; then
