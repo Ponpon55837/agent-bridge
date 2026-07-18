@@ -87,13 +87,17 @@ tmux select-layout -t "$SESSION_NAME:0" tiled
 tmux select-pane -t "$SESSION_NAME:0.$ORCHESTRATOR_PANE" -T orchestrator
 tmux select-pane -t "$SESSION_NAME:0.$IMPLEMENTER_PANE" -T "$IMPLEMENTER_ROLE"
 tmux select-pane -t "$SESSION_NAME:0.$REVIEWER_PANE" -T "$REVIEWER_ROLE"
+SECURITY_NOTICE='安全要求：不得將 API token、密碼、私鑰、完整環境變數或其他敏感認證資訊寫入 mailbox、log、handoff 或訊息內容。若畫面中出現敏感資訊，請立即遮蔽且不要轉傳。'
 if [[ "$ORCHESTRATOR_RUNTIME" != none ]]; then
   orchestrator_cmd="$("$SCRIPT_DIR/runtime-adapter.sh" "$ORCHESTRATOR_RUNTIME")"
   command -v "$orchestrator_cmd" >/dev/null 2>&1 || die "runtime not installed: $ORCHESTRATOR_RUNTIME"
   tmux send-keys -t "$SESSION_NAME:0.$ORCHESTRATOR_PANE" "$orchestrator_cmd" Enter
+  tmux send-keys -t "$SESSION_NAME:0.$ORCHESTRATOR_PANE" "$SECURITY_NOTICE" Enter
 fi
 tmux send-keys -t "$SESSION_NAME:0.$IMPLEMENTER_PANE" "$implementer_cmd" Enter
 tmux send-keys -t "$SESSION_NAME:0.$REVIEWER_PANE" "$reviewer_cmd" Enter
+tmux send-keys -t "$SESSION_NAME:0.$IMPLEMENTER_PANE" "$SECURITY_NOTICE" Enter
+tmux send-keys -t "$SESSION_NAME:0.$REVIEWER_PANE" "$SECURITY_NOTICE" Enter
 SUPERVISOR_SCRIPT="$SCRIPT_DIR/supervisor.sh"
 if [[ -x "$SUPERVISOR_SCRIPT" ]]; then
   "$SUPERVISOR_SCRIPT" --session "$SESSION_NAME" --project "$PROJECT_DIR" --orchestrator-pane "$ORCHESTRATOR_PANE" --implementer-pane "$IMPLEMENTER_PANE" --reviewer-pane "$REVIEWER_PANE" >"$RUNTIME_DIR/state/supervisor.log" 2>&1 &
