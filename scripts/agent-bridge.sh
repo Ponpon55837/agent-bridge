@@ -11,6 +11,7 @@ REVIEWER_ROLE="review"
 PANE_COUNT=3
 IMPLEMENTER_RUNTIME="opencode"
 REVIEWER_RUNTIME="opencode"
+ORCHESTRATOR_RUNTIME="codex"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BRIDGE_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 die() { echo "agent-bridge: $*" >&2; exit 1; }
@@ -22,6 +23,7 @@ while [[ $# -gt 0 ]]; do
     --panes) [[ $# -ge 2 ]] || die "--panes requires a value"; PANE_COUNT="$2"; shift 2 ;;
     --implementer-runtime) [[ $# -ge 2 ]] || die "--implementer-runtime requires a value"; IMPLEMENTER_RUNTIME="$2"; shift 2 ;;
     --reviewer-runtime) [[ $# -ge 2 ]] || die "--reviewer-runtime requires a value"; REVIEWER_RUNTIME="$2"; shift 2 ;;
+    --orchestrator-runtime) [[ $# -ge 2 ]] || die "--orchestrator-runtime requires a value"; ORCHESTRATOR_RUNTIME="$2"; shift 2 ;;
     -h|--help) echo "Usage: $0 [--session NAME] [--project DIR]"; exit 0 ;;
     *) die "unknown option: $1" ;;
   esac
@@ -38,6 +40,7 @@ if [[ -n "$CONFIG_FILE" ]]; then
   [[ "$PANE_COUNT" == 3 ]] && PANE_COUNT="$CONFIG_PANES"
   [[ "$IMPLEMENTER_RUNTIME" == opencode ]] && IMPLEMENTER_RUNTIME="$CONFIG_IMPLEMENTER_RUNTIME"
   [[ "$REVIEWER_RUNTIME" == opencode ]] && REVIEWER_RUNTIME="$CONFIG_REVIEWER_RUNTIME"
+  [[ "$ORCHESTRATOR_RUNTIME" == codex ]] && ORCHESTRATOR_RUNTIME="$CONFIG_ORCHESTRATOR_RUNTIME"
   [[ "$IMPLEMENTER_PANE" == 1 ]] && IMPLEMENTER_PANE="$CONFIG_IMPLEMENTER_PANE"
   [[ "$REVIEWER_PANE" == 2 ]] && REVIEWER_PANE="$CONFIG_REVIEWER_PANE"
   [[ "$IMPLEMENTER_ROLE" == implementation ]] && IMPLEMENTER_ROLE="$CONFIG_IMPLEMENTER_ROLE"
@@ -58,7 +61,11 @@ tmux select-layout -t "$SESSION_NAME:0" tiled
 tmux select-pane -t "$SESSION_NAME:0.0" -T orchestrator
 tmux select-pane -t "$SESSION_NAME:0.$IMPLEMENTER_PANE" -T "$IMPLEMENTER_ROLE"
 tmux select-pane -t "$SESSION_NAME:0.$REVIEWER_PANE" -T "$REVIEWER_ROLE"
-# Pane 0 is intentionally untouched; start the orchestrator CLI manually there.
+if [[ "$ORCHESTRATOR_RUNTIME" != none ]]; then
+  orchestrator_cmd="$("$SCRIPT_DIR/runtime-adapter.sh" "$ORCHESTRATOR_RUNTIME")"
+  command -v "$orchestrator_cmd" >/dev/null 2>&1 || die "runtime not installed: $ORCHESTRATOR_RUNTIME"
+  tmux send-keys -t "$SESSION_NAME:0.0" "$orchestrator_cmd" Enter
+fi
 implementer_cmd="$("$SCRIPT_DIR/runtime-adapter.sh" "$IMPLEMENTER_RUNTIME")"
 reviewer_cmd="$("$SCRIPT_DIR/runtime-adapter.sh" "$REVIEWER_RUNTIME")"
 command -v "$implementer_cmd" >/dev/null 2>&1 || die "runtime not installed: $IMPLEMENTER_RUNTIME"
@@ -71,5 +78,5 @@ if [[ -x "$SUPERVISOR_SCRIPT" ]]; then
   echo $! > "$RUNTIME_DIR/state/supervisor.pid"
 fi
 printf 'session_started %s project=%s\n' "$(date +%s)" "$PROJECT_DIR" >> "$RUNTIME_DIR/state/events.log"
-echo "READY session=$SESSION_NAME project=$PROJECT_DIR panes=$PANE_COUNT implementer=$IMPLEMENTER_RUNTIME reviewer=$REVIEWER_RUNTIME"
-echo "Pane 0 is the orchestrator shell; attach with: tmux attach -t $SESSION_NAME"
+echo "READY session=$SESSION_NAME project=$PROJECT_DIR panes=$PANE_COUNT orchestrator=$ORCHESTRATOR_RUNTIME implementer=$IMPLEMENTER_RUNTIME reviewer=$REVIEWER_RUNTIME"
+echo "Attach with: tmux attach -t $SESSION_NAME"

@@ -13,6 +13,7 @@ def scalar(section, key, default=""):
 
 values = {
     "CONFIG_PROJECT_ROOT": scalar("project", "root", "."),
+    "CONFIG_ORCHESTRATOR_RUNTIME": scalar("project", "orchestrator_runtime", "codex"),
     "CONFIG_SESSION": scalar("session", "name", "agent-bridge-dev"),
     "CONFIG_PANES": scalar("session", "pane_count", "3"),
 }

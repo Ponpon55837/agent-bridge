@@ -1,6 +1,7 @@
 project:
   name: example
   root: .
+  orchestrator_runtime: codex
 
 session:
   name: agent-bridge-dev
