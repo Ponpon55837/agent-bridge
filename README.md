@@ -180,6 +180,8 @@ runtime 目錄包含：
 
 這些檔案已加入 `.gitignore`，不會污染專案 Git。
 
+要增加或減少 pane，直接修改 `.ai-bridge.yaml` 的 `session.pane_count`。修改後先執行 `agent-bridge down`，再執行 `agent-bridge up`；既有 tmux session 不會自動重建。
+
 ## 移除導入
 
 先預覽：
