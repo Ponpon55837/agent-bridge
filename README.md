@@ -2,6 +2,8 @@
 
 Agent Bridge 是可導入多個專案的 tmux 多代理工作流。它建立三個 pane：
 
+跨 pane 溝通使用 [tmux-bridge-mcp](https://github.com/howardpen9/tmux-bridge-mcp)。Agent Bridge 負責建立 pane；tmux-bridge-mcp 負責讓 Codex、Claude Code、OpenCode 等 MCP client 讀取與傳送訊息。兩者缺一不可。
+
 | Pane | 角色 | 預設 runtime |
 | --- | --- | --- |
 | 0 | orchestrator | Codex |
@@ -21,6 +23,30 @@ agent-bridge doctor
 
 安裝器會把 agent-bridge 放到 ~/.local/bin。若目前 shell 找不到它，重新開啟終端機，或依安裝器提示重新載入 shell 設定。
 
+### 安裝跨 pane 通訊
+
+tmux-bridge-mcp 需要 Node.js 18+ 與 npx：
+
+~~~bash
+npx -y tmux-bridge-mcp setup
+npx -y tmux-bridge-mcp --help
+~~~
+
+setup 會替支援的 agent 建立 MCP 設定。完成後重新啟動 agent CLI；若使用自訂 MCP 設定，確認每個 agent 都包含 tmux-bridge server：
+
+~~~json
+{
+  "mcpServers": {
+    "tmux-bridge": {
+      "command": "npx",
+      "args": ["-y", "tmux-bridge-mcp"]
+    }
+  }
+}
+~~~
+
+Agent Bridge 不會在啟動失敗時偷偷下載或安裝 MCP server。可用 agent-bridge doctor 檢查 node、npx 與 tmux；MCP 設定仍需由使用者確認。
+
 ### 初始化目標專案（每個專案一次）
 
 ~~~bash
@@ -29,7 +55,7 @@ agent-bridge init
 agent-bridge validate
 ~~~
 
-init 會建立 .ai-bridge.yaml、runtime 目錄與必要的 .gitignore 區塊。插件已安裝不代表專案已初始化；validate 是啟動前的必要檢查。
+init 會建立 .ai-bridge.yaml、runtime 目錄與必要的 .gitignore 區塊。插件已安裝不代表專案已初始化；validate 是啟動前的必要檢查。跨 pane 溝通另外需要先完成 tmux-bridge-mcp 設定。
 
 ### 啟動
 
@@ -119,6 +145,8 @@ agent-bridge status --project /path/to/your-project
 
 - 缺少設定：執行 agent-bridge init --project /path/to/your-project
 - 缺少 tmux 或 python3：安裝後重新執行 agent-bridge doctor
+- node 或 npx 不存在：安裝 Node.js 18+
+- MCP 工具不存在或 agent 沒有工具：執行 npx -y tmux-bridge-mcp setup，然後重啟 agent CLI
 - runtime 未安裝：安裝設定指定的 CLI，或改用已安裝的 runtime
 - session 已存在：執行 agent-bridge switch <session-name>
 

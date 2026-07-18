@@ -15,7 +15,7 @@ Commands:
   setup       Prepare the current project for Agent Bridge
   up          Start the default workflow for the current project
   down        Stop the default workflow
-  doctor      Check local prerequisites
+  doctor      Check local prerequisites, runtimes, and MCP bridge tooling
   start       Create or reuse a tmux workflow session
   install     Add runtime ignore rules to a project
   status      Show session and runtime state
@@ -71,7 +71,12 @@ case "$command" in
     echo "Shell: ${BASH_VERSION:+bash} ${ZSH_VERSION:+zsh}"
     echo "目前指令: ${BASH_SOURCE[0]:-agent-bridge}"
     if command -v agent-bridge >/dev/null 2>&1; then echo "ok: agent-bridge ($(command -v agent-bridge))"; else echo "找不到 agent-bridge：請重新開啟終端機，或執行 ~/.local/bin/agent-bridge doctor"; failed=1; fi
-    for tool in tmux python3; do command -v "$tool" >/dev/null 2>&1 && echo "ok: $tool" || { echo "缺少必要工具: $tool"; failed=1; }; done
+    for tool in tmux python3 node npx; do command -v "$tool" >/dev/null 2>&1 && echo "ok: $tool" || { echo "缺少必要工具: $tool"; failed=1; }; done
+    if command -v npx >/dev/null 2>&1; then
+      echo "MCP bridge: tmux-bridge-mcp (configure with: npx -y tmux-bridge-mcp setup)"
+    else
+      echo "缺少 MCP bridge：先安裝 Node.js 18+，再執行 npx -y tmux-bridge-mcp setup" >&2
+    fi
     for tool in codex opencode claude; do command -v "$tool" >/dev/null 2>&1 && echo "available: $tool" || echo "optional: $tool not installed"; done
     if [[ ":${PATH}:" != *":$HOME/.local/bin:"* ]]; then
       echo "提示：目前終端機尚未載入 ~/.local/bin。請關閉後重新開啟，或執行："
@@ -104,7 +109,7 @@ case "$command" in
     project="$(cd "$project" 2>/dev/null && pwd)" || { echo "agent-bridge is not initialized for this project." >&2; echo "Missing: project directory" >&2; echo "Run: agent-bridge init" >&2; exit 1; }
     missing=()
     [[ -f "$project/.ai-bridge.yaml" ]] || missing+=(".ai-bridge.yaml")
-    for tool in tmux python3; do command -v "$tool" >/dev/null 2>&1 || missing+=("command $tool"); done
+    for tool in tmux python3 node npx; do command -v "$tool" >/dev/null 2>&1 || missing+=("command $tool"); done
     if ((${#missing[@]})); then
       echo "agent-bridge is not initialized for this project." >&2
       printf 'Missing: %s\n' "$(IFS=', '; echo "${missing[*]}")" >&2

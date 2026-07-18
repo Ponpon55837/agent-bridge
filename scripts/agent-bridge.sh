@@ -51,6 +51,8 @@ if [[ -n "$CONFIG_FILE" ]]; then
 fi
 command -v tmux >/dev/null 2>&1 || die "required command not installed: tmux. Run: agent-bridge doctor"
 command -v python3 >/dev/null 2>&1 || die "required command not installed: python3. Run: agent-bridge doctor"
+command -v node >/dev/null 2>&1 || die "required command not installed: node (Node.js 18+ required by tmux-bridge-mcp). Run: agent-bridge doctor"
+command -v npx >/dev/null 2>&1 || die "required command not installed: npx (required by tmux-bridge-mcp). Run: agent-bridge doctor"
 [[ "$IMPLEMENTER_PANE" =~ ^[1-9][0-9]*$ && "$REVIEWER_PANE" =~ ^[1-9][0-9]*$ ]] || die "agent pane must be a positive integer"
 if [[ "$ORCHESTRATOR_RUNTIME" != none ]]; then
   runtime_cmd="$("$SCRIPT_DIR/runtime-adapter.sh" "$ORCHESTRATOR_RUNTIME")"
