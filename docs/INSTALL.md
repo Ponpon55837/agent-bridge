@@ -1,45 +1,39 @@
-# Installation and removal
+# 導入與移除
 
-## Install into a project
+## 導入
 
-```bash
-git clone <agent-bridge-repository>
-cd agent-bridge
-./scripts/agent-bridge install --project /absolute/project/path --copy-config
-./scripts/agent-bridge start --session my-project-ai --project /absolute/project/path
-```
-
-The installer does not copy scripts into the target project. It creates only the ignored
-`.ai-bridge/` runtime directory. Start the orchestrator manually in pane 0, then use
-the implementer and reviewer panes.
-
-Runtime selection and extra panes are available at startup:
+在目標專案執行：
 
 ```bash
-./scripts/agent-bridge start --project /absolute/project/path \
-  --implementer-runtime opencode --reviewer-runtime claude --panes 4
+agent-bridge setup
 ```
 
-## Check status
+這會建立 `.ai-bridge/`、加入 Git ignore，並可選擇建立 `.ai-bridge.yaml`。不會把 Agent Bridge 腳本複製進目標專案。
+
+## 啟動
 
 ```bash
-./scripts/agent-bridge status --session my-project-ai --project /absolute/project/path
+agent-bridge up
 ```
 
-## Stop
+需要客製 runtime 或 pane 時：
 
 ```bash
-./scripts/agent-bridge stop --session my-project-ai --project /absolute/project/path
+agent-bridge up --implementer-runtime opencode --reviewer-runtime claude --panes 4
 ```
 
-## Remove runtime state
+## 移除
 
-Removal is a dry run by default:
+先預覽：
 
 ```bash
-./scripts/agent-bridge uninstall --project /absolute/project/path
-./scripts/agent-bridge uninstall --project /absolute/project/path --force
+agent-bridge uninstall --project /你的專案
 ```
 
-`--force` removes only `.ai-bridge/` and the specified session. It does not remove source
-files, Git history, configuration, or unrelated tmux sessions.
+確認後：
+
+```bash
+agent-bridge uninstall --project /你的專案 --force
+```
+
+移除只會處理 Agent Bridge 建立的 runtime、session 與 Git ignore 區塊。

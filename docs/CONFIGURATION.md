@@ -1,30 +1,28 @@
-# Configuration
+# 設定規範
 
-The example configuration is `.ai-bridge.example.yaml`. Copy it to the project as
-`.ai-bridge.yaml` when configuration support is needed. Keep personal overrides in
-`.ai-bridge.local.yaml`; both local runtime files should remain uncommitted.
+專案設定檔為 `.ai-bridge.yaml`，個人覆寫檔為 `.ai-bridge.local.yaml`。runtime 目錄 `.ai-bridge/` 不應提交到 Git。
 
-## Project
+```yaml
+project:
+  name: my-project
+  root: .
 
-`project.name` is a display name. `project.root` identifies the project where panes
-and runtime state are created.
+session:
+  name: my-project-ai
+  pane_count: 3
 
-## Session
+agents:
+  - id: implementer
+    runtime: opencode
+    pane: 1
+  - id: reviewer
+    runtime: claude
+    pane: 2
 
-`session.name` must contain only letters, numbers, `_`, and `-`. Use a unique name per
-project and per concurrent workflow. `pane_count` defaults to three and can be increased
-with `--panes`; pane 0 is the orchestrator, pane 1 the implementer, and pane 2 the reviewer.
+workflow:
+  notification: mailbox
+```
 
-## Agents
+目前 launcher 會讀取 session 名稱、pane 數量，以及 implementer/reviewer runtime。CLI 明確傳入的參數優先於設定檔。
 
-Each agent has an `id`, a `runtime` (`codex`, `opencode`, or `claude`), a pane number,
-and a role. Runtime adapters will own CLI-specific startup flags; do not put shell
-metacharacters into runtime names or session names.
-
-## Workflow
-
-`mailbox` is the only completion notification channel. Agents write event files under
-`.ai-bridge/mailbox/`; the supervisor records lifecycle events under `.ai-bridge/state/`.
-
-The launcher automatically reads `.ai-bridge.yaml`. Use `--config PATH` for another file.
-Explicit CLI options override configuration values.
+可用 runtime：`codex`、`opencode`、`claude`、`shell`。

@@ -1,81 +1,248 @@
 # Agent Bridge
 
-Agent Bridge is a standalone, configurable multi-agent workflow launcher for Codex,
-OpenCode, Claude, and future CLI runtimes. It creates an isolated tmux session, keeps
-runtime files out of Git, and coordinates completion through mailbox event files.
+Agent Bridge 是一套可導入不同專案的多代理協作工具。它使用 tmux 建立多個工作區，讓總控、實作者與審查者可以在同一個 workflow 中協作，並透過 mailbox 事件檔傳遞完成通知。
 
-## Current status
+目前支援的 runtime：
 
-The project is in the extraction phase. The three-pane launcher, supervisor, mailbox
-runtime, status, stop, uninstall, and validation commands are available. Runtime adapter
-configuration and arbitrary pane counts are planned next.
+- Codex
+- OpenCode
+- Claude
+- 其他可由 shell 啟動的 CLI 工具
 
-## Quick start
+## 最快開始
+
+先確認環境：
 
 ```bash
-cd /path/to/agent-bridge
-./scripts/agent-bridge start \
-  --session my-project-ai \
-  --project /absolute/path/to/project
+tmux -V
+python3 --version
 ```
 
-Attach in another terminal:
+進入要導入的專案目錄：
 
 ```bash
-tmux attach -t my-project-ai
+cd /你的專案路徑
 ```
 
-Pane 0 is deliberately untouched by the launcher. Start Codex or another orchestrator
-there manually. Pane 1 and pane 2 are prepared for implementation and review agents.
-
-## Daily commands
+第一次導入：
 
 ```bash
-./scripts/agent-bridge status --session my-project-ai --project /absolute/path/to/project
-./scripts/agent-bridge stop --session my-project-ai --project /absolute/path/to/project
+/path/to/agent-bridge/scripts/agent-bridge setup
+```
+
+啟動 workflow：
+
+```bash
+/path/to/agent-bridge/scripts/agent-bridge up
+```
+
+如果已將 `scripts/agent-bridge` 加入 `PATH`，之後可以簡化成：
+
+```bash
+cd /你的專案路徑
+agent-bridge setup
+agent-bridge up
+```
+
+`up` 會依專案資料夾名稱自動建立 session，例如專案叫 `Lucky50`，session 預設會叫 `Lucky50-ai`。
+
+## 啟動後怎麼使用
+
+查看所有 session：
+
+```bash
+agent-bridge sessions
+```
+
+進入目前專案的 session：
+
+```bash
+agent-bridge switch Lucky50-ai
+```
+
+或直接使用 tmux：
+
+```bash
+tmux attach -t Lucky50-ai
+```
+
+預設 pane 分工：
+
+| Pane | 角色 | 說明 |
+|---|---|---|
+| 0 | 總控 | 手動啟動 Codex 或其他總控 CLI |
+| 1 | 實作者 | 執行總控派發的程式修改 |
+| 2 | 審查者 | 檢查修改、測試與回歸風險 |
+| 3 以上 | 預留 | 給額外 agent 或專案角色使用 |
+
+啟動器刻意不會對 pane 0 注入指令；這是為了避免干擾總控輸入框。啟動後請在 pane 0 手動執行 Codex。
+
+## 日常指令
+
+```bash
+# 查看目前專案與 session 狀態
+agent-bridge status
+
+# 列出所有 session，當前 tmux session 會標記 *
+agent-bridge sessions
+
+# 停止目前專案的預設 session
+agent-bridge down
+
+# 重新啟動
+agent-bridge up
+
+# 檢查本機工具是否安裝
+agent-bridge doctor
+```
+
+## 多專案與 session 管理
+
+不同專案請使用不同 session 名稱：
+
+```bash
+agent-bridge up --project /projects/lucky50 --session lucky50-ai
+agent-bridge up --project /projects/shop --session shop-ai
+```
+
+列出並確認目前所在位置：
+
+```bash
+agent-bridge sessions
+```
+
+快速切換：
+
+```bash
+agent-bridge switch shop-ai
+```
+
+更名 session：
+
+```bash
+agent-bridge rename old-name new-name
+```
+
+刪除不再使用的 session：
+
+```bash
+agent-bridge kill --session old-name
+```
+
+指令預設會要求確認。確定名稱無誤時，才使用：
+
+```bash
+agent-bridge kill --session old-name --force
+```
+
+## 指定不同 runtime 或更多 pane
+
+一般使用不需要指定；需要客製時可以這樣啟動：
+
+```bash
+agent-bridge up \
+  --implementer-runtime opencode \
+  --reviewer-runtime claude \
+  --panes 4
+```
+
+可用 runtime：`codex`、`opencode`、`claude`、`shell`。
+
+## 專案設定
+
+`setup` 會在目標專案建立：
+
+```text
+.ai-bridge.yaml       # 專案共用設定，可提交
+.ai-bridge/           # runtime 狀態，不提交
+.ai-bridge.local.yaml # 個人覆寫，不提交
+```
+
+runtime 目錄包含：
+
+- mailbox 事件檔
+- supervisor PID
+- supervisor log
+- session lifecycle events
+
+這些檔案已加入 `.gitignore`，不會污染專案 Git。
+
+## 移除導入
+
+先預覽：
+
+```bash
+agent-bridge uninstall --project /你的專案路徑
+```
+
+確認後執行：
+
+```bash
+agent-bridge uninstall --project /你的專案路徑 --force
+```
+
+移除會：
+
+- 停止指定 supervisor
+- 關閉指定 session
+- 刪除 `.ai-bridge/`
+- 移除 Agent Bridge 自己加入的 `.gitignore` 區塊
+
+移除不會刪除：
+
+- 專案原始碼
+- Git commit 或 branch
+- 其他 tmux session
+- 使用者自行建立的設定內容
+
+## 常見問題
+
+### 找不到 `agent-bridge`
+
+使用完整路徑：
+
+```bash
+/path/to/agent-bridge/scripts/agent-bridge doctor
+```
+
+或將腳本加入 PATH：
+
+```bash
+export PATH="/path/to/agent-bridge/scripts:$PATH"
+```
+
+### session 已存在
+
+這是安全行為，啟動器不會重複建立 pane。直接切換進既有 session：
+
+```bash
+agent-bridge switch <session-name>
+```
+
+### runtime 沒有安裝
+
+執行：
+
+```bash
+agent-bridge doctor
+```
+
+缺少的 runtime 只會在你把它指定為 implementer 或 reviewer 時造成啟動失敗。
+
+### 想確認所有檔案是否正確
+
+在 Agent Bridge 專案內執行：
+
+```bash
 ./scripts/agent-bridge validate
-./scripts/agent-bridge sessions
-./scripts/agent-bridge switch my-project-ai
-./scripts/agent-bridge rename old-name new-name
-./scripts/agent-bridge kill --session old-name
-```
-
-Starting an existing session is safe: the launcher reports the session and does not create
-duplicate panes. Use a unique session name when working on multiple projects.
-
-`sessions` marks the current tmux session with `*`. `switch` switches the current tmux
-client or attaches from outside tmux. `kill` asks for confirmation unless `--force` is
-provided. `rename` validates names and refuses to overwrite an existing session.
-
-## Verify the installation
-
-```bash
 ./tests/smoke.sh
-./scripts/agent-bridge validate
 ```
 
-## Project integration
+## 開發文件
 
-Agent Bridge does not copy its scripts into the target project. The target receives only
-the ignored `.ai-bridge/` runtime directory. Keep shared settings in a future
-`.ai-bridge.yaml` and personal overrides in `.ai-bridge.local.yaml`.
-
-See [installation](docs/INSTALL.md), [configuration](docs/CONFIGURATION.md), and
-[development](docs/DEVELOPMENT.md) for complete conventions.
-
-## Removal
-
-Always preview removal first:
-
-```bash
-./scripts/agent-bridge uninstall --project /absolute/path/to/project
-```
-
-Apply it only when the target and session are correct:
-
-```bash
-./scripts/agent-bridge uninstall --project /absolute/path/to/project --force
-```
-
-Removal stops the selected supervisor/session and deletes only `.ai-bridge/`. It leaves
-source code, Git files, configuration, and unrelated tmux sessions intact.
+- [快速開始](docs/QUICKSTART.md)
+- [導入與移除](docs/INSTALL.md)
+- [設定規範](docs/CONFIGURATION.md)
+- [Session 管理](docs/SESSIONS.md)
+- [開發規範](docs/DEVELOPMENT.md)
+- [產品 Roadmap](ROADMAP.md)

@@ -1,39 +1,35 @@
-# Session management
+# Session 管理
 
-Use a unique name per project, such as `lucky50-ai` or `agent-bridge-dev`.
+每個專案應使用獨立名稱，例如 `lucky50-ai`、`shop-ai`。
 
-## List and identify
-
-```bash
-./scripts/agent-bridge sessions
-```
-
-The current tmux session is marked with `*`.
-
-## Switch
+## 查看所有 session
 
 ```bash
-./scripts/agent-bridge switch lucky50-ai
+agent-bridge sessions
 ```
 
-Inside tmux this switches the current client. Outside tmux it attaches to the target.
+當前所在的 tmux session 會標記 `*`。
 
-## Rename
+## 快速切換
 
 ```bash
-./scripts/agent-bridge rename old-name new-name
+agent-bridge switch lucky50-ai
 ```
 
-Names may contain only letters, numbers, `_`, and `-`. Existing sessions are never
-overwritten. Rename does not move or delete project files.
+在 tmux 內會切換目前 client；在 tmux 外會直接 attach。
 
-## Remove an unused session
+## 更名
 
 ```bash
-./scripts/agent-bridge kill --session old-name
-./scripts/agent-bridge kill --session old-name --force
+agent-bridge rename old-name new-name
 ```
 
-Without `--force`, confirmation is required. Only the exact named session is killed;
-wildcards and empty names are rejected. Remove project runtime separately with
-`agent-bridge uninstall --project /path/to/project --force`.
+名稱只能使用英文字母、數字、底線與連字號，且不會覆蓋既有 session。
+
+## 刪除
+
+```bash
+agent-bridge kill --session old-name
+```
+
+預設會要求確認。確定後才使用 `--force`。刪除 session 不會自動刪除專案 runtime；兩者要分開操作。
