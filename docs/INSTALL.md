@@ -43,3 +43,7 @@ agent-bridge uninstall --project /你的專案 --force
 ```
 
 移除只會處理 Agent Bridge 建立的 runtime、session 與 Git ignore 區塊。
+
+## 不同終端環境
+
+安裝器會自動處理 zsh、Bash、Bash login shell 及一般 POSIX shell。若在 VSCode、tmux 或 IDE 內開的舊終端機找不到指令，先重開該終端機，或執行安裝器顯示的 `source` 指令。也可以使用完整路徑 `~/.local/bin/agent-bridge doctor` 進行診斷。

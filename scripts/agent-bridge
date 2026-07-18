@@ -44,8 +44,17 @@ case "$command" in
     ;;
   doctor)
     failed=0
-    for tool in tmux python3; do command -v "$tool" >/dev/null 2>&1 && echo "ok: $tool" || { echo "missing: $tool"; failed=1; }; done
+    echo "Agent Bridge 環境檢查"
+    echo "系統: $(uname -s 2>/dev/null || echo unknown)"
+    echo "Shell: ${BASH_VERSION:+bash} ${ZSH_VERSION:+zsh}"
+    echo "目前指令: ${BASH_SOURCE[0]:-agent-bridge}"
+    if command -v agent-bridge >/dev/null 2>&1; then echo "ok: agent-bridge ($(command -v agent-bridge))"; else echo "找不到 agent-bridge：請重新開啟終端機，或執行 ~/.local/bin/agent-bridge doctor"; failed=1; fi
+    for tool in tmux python3; do command -v "$tool" >/dev/null 2>&1 && echo "ok: $tool" || { echo "缺少必要工具: $tool"; failed=1; }; done
     for tool in codex opencode claude; do command -v "$tool" >/dev/null 2>&1 && echo "available: $tool" || echo "optional: $tool not installed"; done
+    if [[ ":${PATH}:" != *":$HOME/.local/bin:"* ]]; then
+      echo "提示：目前終端機尚未載入 ~/.local/bin。請關閉後重新開啟，或執行："
+      echo '  export PATH="$HOME/.local/bin:$PATH"'
+    fi
     exit "$failed"
     ;;
   start) exec "$ROOT/scripts/agent-bridge.sh" "$@";;

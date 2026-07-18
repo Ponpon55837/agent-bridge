@@ -31,5 +31,6 @@ case ":${PATH}:" in
     fi
     echo "已幫你設定完成。請關閉這個終端機，再開一個新的終端機。"
     echo "新的終端機開好後，直接輸入：agent-bridge doctor"
+    echo "如果你不想重開，也可以直接輸入：source $rc"
     ;;
 esac
