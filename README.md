@@ -153,6 +153,18 @@ READY session=... panes=3 ...
 Attach with: tmux attach -t <session>
 ~~~
 
+### 狀態與日誌
+
+~~~bash
+agent-bridge status
+agent-bridge status --json
+agent-bridge logs
+agent-bridge logs --agent agent-1
+agent-bridge logs --follow
+~~~
+
+不加 `--json` 時維持人類可讀輸出；`--json` 僅輸出狀態、路徑與 mailbox 數量，不包含 pane 原文。`logs --follow` 會持續追蹤 supervisor log，結束時使用 `Ctrl-C`。
+
 若之後離開 tmux，需要重新進入：
 
 ~~~bash

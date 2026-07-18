@@ -24,6 +24,7 @@ printf '%s\n' '{"schema_version":1,"type":"agent_handoff","agent":"agent-1","sta
 python3 "$ROOT/scripts/validate-handoff.py" "$handoff_json" >/dev/null
 mkdir -p "$tmp_config_dir/.ai-bridge/state"
 "$ROOT/scripts/agent-bridge" status --project "$tmp_config_dir" --session local-session --json | python3 -c 'import json,sys; data=json.load(sys.stdin); assert data["session"] == "local-session" and data["tmux"] == "stopped"'
+"$ROOT/scripts/agent-bridge-logs.sh" --project "$tmp_config_dir" --agent agent-1 --lines 1 >/dev/null
 "$ROOT/tests/integration-tmux.sh"
 if "$ROOT/scripts/agent-bridge-recover.sh" --project "$tmp_config_dir" >/tmp/agent-bridge-recover-check 2>&1; then
   echo "missing runtime recovery check unexpectedly succeeded" >&2; exit 1
