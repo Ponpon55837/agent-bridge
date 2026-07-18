@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+usage() {
+  cat <<'EOF'
+Usage: agent-bridge <command> [options]
+
+Commands:
+  start       Create or reuse a tmux workflow session
+  status      Show session and runtime state
+  stop        Stop the supervisor and tmux session
+  uninstall   Dry-run removal; use --force to remove runtime state
+  validate    Run shell syntax and configuration checks
+  help        Show this help
+EOF
+}
+command="${1:-help}"; shift || true
+case "$command" in
+  start) exec "$ROOT/scripts/agent-bridge.sh" "$@";;
+  stop) exec "$ROOT/scripts/agent-bridge-stop.sh" "$@";;
+  uninstall) exec "$ROOT/scripts/agent-bridge-uninstall.sh" "$@";;
+  status)
+    session="agent-bridge-dev"; project="$(pwd)"
+    while [[ $# -gt 0 ]]; do case "$1" in --session) session="$2"; shift 2;; --project) project="$2"; shift 2;; *) echo "unknown option: $1" >&2; exit 1;; esac; done
+    project="$(cd "$project" && pwd)"; runtime="$project/.ai-bridge"
+    echo "project=$project"; echo "session=$session"
+    if tmux has-session -t "$session" 2>/dev/null; then echo "tmux=running"; tmux list-panes -t "$session" -F 'pane=#{pane_index} title=#{pane_title} command=#{pane_current_command}'; else echo "tmux=stopped"; fi
+    if [[ -f "$runtime/state/supervisor.pid" ]] && kill -0 "$(<"$runtime/state/supervisor.pid")" 2>/dev/null; then echo "supervisor=running pid=$(<"$runtime/state/supervisor.pid")"; else echo "supervisor=stopped"; fi
+    echo "runtime=$runtime"; echo "mailbox_files=$(find "$runtime/mailbox" -type f 2>/dev/null | wc -l | tr -d ' ')"
+    ;;
+  validate)
+    for file in "$ROOT"/scripts/*.sh "$ROOT"/scripts/agent-bridge; do bash -n "$file"; done
+    [[ -f "$ROOT/.ai-bridge.example.yaml" ]] || { echo "missing example config" >&2; exit 1; }
+    echo "validation passed"
+    ;;
+  help|-h|--help) usage;;
+  *) echo "unknown command: $command" >&2; usage >&2; exit 1;;
+esac
