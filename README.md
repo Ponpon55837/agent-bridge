@@ -311,6 +311,7 @@ agent-bridge status --project /path/to/your-project
 - [快速開始](docs/QUICKSTART.md)
 - [安裝與移除](docs/INSTALL.md)
 - [設定規範](docs/CONFIGURATION.md)
+- [安全政策](SECURITY.md)
 - [Session 管理](docs/SESSIONS.md)
 - [開發規範](docs/DEVELOPMENT.md)
 - [Roadmap](ROADMAP.md)
