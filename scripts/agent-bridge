@@ -22,6 +22,7 @@ Commands:
   logs        Show supervisor and handoff logs
   stop        Stop the supervisor and tmux session
   restart     Stop and start the workflow again
+  recover     Check and optionally recover a stale supervisor
   sessions    List sessions and mark the current one
   switch      Attach to or switch to a session
   rename      Rename a session safely
@@ -50,7 +51,7 @@ case "$command" in
     while [[ $# -gt 0 ]]; do case "$1" in --project) project="$2"; shift 2;; --session) session="$2"; extra+=(--session "$session"); shift 2;; --implementer-runtime|--reviewer-runtime|--orchestrator-runtime|--panes|--preset) extra+=("$1" "$2"); shift 2;; *) echo "unknown option: $1" >&2; exit 1;; esac; done
     "$ROOT/scripts/agent-bridge-install.sh" --project "$project"
     if [[ -z "$session" && -f "$project/.ai-bridge.yaml" ]]; then
-      session="$(python3 "$ROOT/scripts/config-loader.py" "$project/.ai-bridge.yaml" | sed -n "s/^CONFIG_SESSION='\?\([^']*\)'\?$/\1/p")"
+      session="$(python3 "$ROOT/scripts/config-loader.py" "$project/.ai-bridge.yaml" | sed -n 's/^CONFIG_SESSION=//p' | sed "s/^'//; s/'$//")"
     fi
     [[ -n "$session" ]] || session="$(basename "$(cd "$project" && pwd)")-ai"
     if tmux has-session -t "$session" 2>/dev/null; then
@@ -66,7 +67,7 @@ case "$command" in
     project="$(pwd)"; session="$(basename "$(pwd)")-ai"; explicit_session=0
     while [[ $# -gt 0 ]]; do case "$1" in --project) project="$2"; shift 2;; --session) session="$2"; explicit_session=1; shift 2;; *) echo "unknown option: $1" >&2; exit 1;; esac; done
     if (( ! explicit_session )) && [[ -f "$project/.ai-bridge.yaml" ]]; then
-      session="$(python3 "$ROOT/scripts/config-loader.py" "$project/.ai-bridge.yaml" | sed -n "s/^CONFIG_SESSION='\?\([^']*\)'\?$/\1/p")"
+      session="$(python3 "$ROOT/scripts/config-loader.py" "$project/.ai-bridge.yaml" | sed -n 's/^CONFIG_SESSION=//p' | sed "s/^'//; s/'$//")"
     fi
     exec "$ROOT/scripts/agent-bridge-stop.sh" --project "$project" --session "$session"
     ;;
@@ -126,6 +127,7 @@ case "$command" in
     fi
     exec "$ROOT/scripts/agent-bridge" up "${restart_args[@]}"
     ;;
+  recover) exec "$ROOT/scripts/agent-bridge-recover.sh" "$@";;
   uninstall) exec "$ROOT/scripts/agent-bridge-uninstall.sh" "$@";;
   status)
     session="agent-bridge-dev"; project="$(pwd)"
