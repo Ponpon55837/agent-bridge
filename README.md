@@ -146,6 +146,8 @@ agent-bridge up
 
 只要前面的 tmux-bridge-mcp 設定已完成，三個 agent 就能透過 MCP 工具讀取其他 pane、傳送訊息並互相協作。Agent Bridge 負責「建立並顯示 pane」；tmux-bridge-mcp 負責「讓 agent 溝通」。
 
+總控 pane 負責規劃、派工、核對回報與推進流程；執行 pane 必須回報 `IN_PROGRESS`、`READY_FOR_REVIEW` 或 `BLOCKED`，審查 pane 必須回報 `APPROVED` 或 `CHANGES_REQUESTED`。正式回報需包含 `SUMMARY`/`FINDINGS`、`VERIFICATION` 與 `NEXT_ACTION`，避免流程因缺少證據而靜默停滯。
+
 在 IDE、API 或其他 non-TTY 環境，up 才會在背景建立 session，並清楚印出 session 名稱與 attach 指令：
 
 ~~~text
@@ -255,11 +257,13 @@ orchestrator pane 必須是唯一且小於 pane_count；啟動器會在建立 tm
 
 ~~~text
 .ai-bridge.yaml       # 共用設定，可提交
-.ai-bridge/            # mailbox、PID、log、事件；不提交
+.ai-bridge/            # mailbox、PID、log、事件、workflow state；不提交
 .ai-bridge.local.yaml  # 個人覆寫，優先於共用設定
 ~~~
 
 完成通知會在 mailbox 產生原有的 Markdown handoff，並另外產生同名 `.json` metadata。JSON 使用 `schema_version: 1`，只包含 agent、status、timestamp 與 Markdown 檔案路徑，不包含 pane 原文或敏感認證資訊。
+
+supervisor 另外維護 `.ai-bridge/state/workflow.json`，記錄最近一次有效回報、目前狀態與總控應採取的下一步；它只保存狀態 metadata，不保存 pane 原文。
 
 更新設定範例前會先備份現有設定：
 

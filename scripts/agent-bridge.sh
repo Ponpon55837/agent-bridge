@@ -104,16 +104,22 @@ tmux select-pane -t "$SESSION_NAME:0.$ORCHESTRATOR_PANE" -T orchestrator
 tmux select-pane -t "$SESSION_NAME:0.$IMPLEMENTER_PANE" -T "$IMPLEMENTER_ROLE"
 tmux select-pane -t "$SESSION_NAME:0.$REVIEWER_PANE" -T "$REVIEWER_ROLE"
 SECURITY_NOTICE='安全要求：不得將 API token、密碼、私鑰、完整環境變數或其他敏感認證資訊寫入 mailbox、log、handoff 或訊息內容。若畫面中出現敏感資訊，請立即遮蔽且不要轉傳。'
+ORCHESTRATOR_PROTOCOL='總控協定：你負責規劃、派工、追蹤與推進，不可只等待訊息。每個任務先建立明確步驟、驗收條件與負責 pane，再派工；收到回報後逐項核對，若缺少 STATUS、驗證結果或下一步，立即要求補報。流程狀態只能是 PLANNED、ASSIGNED、IN_PROGRESS、READY_FOR_REVIEW、APPROVED、CHANGES_REQUESTED、BLOCKED、DONE。'
+IMPLEMENTER_PROTOCOL='執行協定：只執行總控明確派發的任務；開始時回報 [AGENT_BRIDGE STATUS=IN_PROGRESS]，完成時回報 [AGENT_BRIDGE STATUS=READY_FOR_REVIEW]，並包含 SUMMARY、CHANGED_FILES、VERIFICATION、BLOCKERS、NEXT_ACTION；遇到阻塞立即回報 BLOCKED，不得靜默等待或宣稱未驗證的完成。'
+REVIEWER_PROTOCOL='審查協定：收到 READY_FOR_REVIEW 後才開始審查；完成時回報 [AGENT_BRIDGE STATUS=APPROVED] 或 [AGENT_BRIDGE STATUS=CHANGES_REQUESTED]，並包含 FINDINGS、VERIFICATION、NEXT_ACTION；沒有看到完整變更與驗證證據時不得回報 APPROVED。'
 if [[ "$ORCHESTRATOR_RUNTIME" != none ]]; then
   orchestrator_cmd="$("$SCRIPT_DIR/runtime-adapter.sh" "$ORCHESTRATOR_RUNTIME")"
   command -v "$orchestrator_cmd" >/dev/null 2>&1 || die "runtime not installed: $ORCHESTRATOR_RUNTIME"
   tmux send-keys -t "$SESSION_NAME:0.$ORCHESTRATOR_PANE" "$orchestrator_cmd" Enter
   tmux send-keys -t "$SESSION_NAME:0.$ORCHESTRATOR_PANE" "$SECURITY_NOTICE" Enter
+  tmux send-keys -t "$SESSION_NAME:0.$ORCHESTRATOR_PANE" "$ORCHESTRATOR_PROTOCOL" Enter
 fi
 tmux send-keys -t "$SESSION_NAME:0.$IMPLEMENTER_PANE" "$implementer_cmd" Enter
 tmux send-keys -t "$SESSION_NAME:0.$REVIEWER_PANE" "$reviewer_cmd" Enter
 tmux send-keys -t "$SESSION_NAME:0.$IMPLEMENTER_PANE" "$SECURITY_NOTICE" Enter
 tmux send-keys -t "$SESSION_NAME:0.$REVIEWER_PANE" "$SECURITY_NOTICE" Enter
+tmux send-keys -t "$SESSION_NAME:0.$IMPLEMENTER_PANE" "$IMPLEMENTER_PROTOCOL" Enter
+tmux send-keys -t "$SESSION_NAME:0.$REVIEWER_PANE" "$REVIEWER_PROTOCOL" Enter
 SUPERVISOR_SCRIPT="$SCRIPT_DIR/supervisor.sh"
 if [[ -x "$SUPERVISOR_SCRIPT" ]]; then
   "$SUPERVISOR_SCRIPT" --session "$SESSION_NAME" --project "$PROJECT_DIR" --orchestrator-pane "$ORCHESTRATOR_PANE" --implementer-pane "$IMPLEMENTER_PANE" --reviewer-pane "$REVIEWER_PANE" >"$RUNTIME_DIR/state/supervisor.log" 2>&1 &

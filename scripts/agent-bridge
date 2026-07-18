@@ -148,15 +148,17 @@ case "$command" in
     if [[ -d "$runtime/mailbox" ]]; then
       mailbox_files="$(find "$runtime/mailbox" -type f 2>/dev/null | wc -l | tr -d ' ')"
     fi
+    workflow_file="$runtime/state/workflow.json"
     if (( output_json )); then
-      python3 -c 'import json,sys; print(json.dumps({"project":sys.argv[1],"session":sys.argv[2],"tmux":sys.argv[3],"supervisor":sys.argv[4],"health":sys.argv[5],"supervisor_pid":int(sys.argv[6]) if sys.argv[6] else None,"runtime":sys.argv[7],"mailbox_files":int(sys.argv[8])}, ensure_ascii=False))' \
-        "$project" "$session" "$tmux_state" "$supervisor_state" "$supervisor_health" "$supervisor_pid" "$runtime" "$mailbox_files"
+      python3 -c 'import json,sys,os; state=None; path=sys.argv[9]; state=json.load(open(path,encoding="utf-8")) if os.path.isfile(path) else None; print(json.dumps({"project":sys.argv[1],"session":sys.argv[2],"tmux":sys.argv[3],"supervisor":sys.argv[4],"health":sys.argv[5],"supervisor_pid":int(sys.argv[6]) if sys.argv[6] else None,"runtime":sys.argv[7],"mailbox_files":int(sys.argv[8]),"workflow":state}, ensure_ascii=False))' \
+        "$project" "$session" "$tmux_state" "$supervisor_state" "$supervisor_health" "$supervisor_pid" "$runtime" "$mailbox_files" "$workflow_file"
       exit 0
     fi
     echo "project=$project"; echo "session=$session"
     if [[ "$tmux_state" == running ]]; then echo "tmux=running"; tmux list-panes -t "$session" -F 'pane=#{pane_index} title=#{pane_title} command=#{pane_current_command}'; else echo "tmux=stopped"; fi
     if [[ "$supervisor_state" == running ]]; then echo "supervisor=running pid=$supervisor_pid health=$supervisor_health"; else echo "supervisor=stopped"; fi
     echo "runtime=$runtime"; echo "mailbox_files=$mailbox_files"
+    [[ -f "$workflow_file" ]] && echo "workflow=$(<"$workflow_file")"
     ;;
   logs) exec "$ROOT/scripts/agent-bridge-logs.sh" "$@";;
   sessions) exec "$ROOT/scripts/agent-bridge-sessions.sh" "$@";;
