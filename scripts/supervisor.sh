@@ -32,7 +32,7 @@ write_mailbox() {
 write_handoff_metadata() {
   local agent_id="$1" status="$2" ts="$3" mailbox_file="$4" file tmp
   file="$mailbox_file.json"; tmp="$file.tmp.$$"
-  python3 -c 'import json,sys; print(json.dumps({"agent":sys.argv[1],"status":sys.argv[2],"timestamp":int(sys.argv[3]),"mailbox_file":sys.argv[4]}, ensure_ascii=False))' \
+  python3 -c 'import json,sys; print(json.dumps({"schema_version":1,"type":"agent_handoff","agent":sys.argv[1],"status":sys.argv[2],"timestamp":int(sys.argv[3]),"mailbox_file":sys.argv[4]}, ensure_ascii=False))' \
     "$agent_id" "$status" "$ts" "$mailbox_file" > "$tmp" && mv -f "$tmp" "$file"
   record_event "handoff: wrote $file"
 }

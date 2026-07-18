@@ -19,4 +19,5 @@ printf 'session:\n  name: local-session\n' > "$tmp_config_dir/.ai-bridge.local.y
 if ! python3 "$ROOT/scripts/config-loader.py" "$tmp_config_dir/.ai-bridge.yaml" | grep -qx "CONFIG_SESSION=local-session"; then
   echo "local config override failed" >&2; exit 1
 fi
+"$ROOT/tests/integration-tmux.sh"
 echo "smoke tests passed: $pass checks"

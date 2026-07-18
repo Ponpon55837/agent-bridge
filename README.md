@@ -247,6 +247,8 @@ orchestrator pane 必須是唯一且小於 pane_count；啟動器會在建立 tm
 .ai-bridge.local.yaml  # 個人覆寫，優先於共用設定
 ~~~
 
+完成通知會在 mailbox 產生原有的 Markdown handoff，並另外產生同名 `.json` metadata。JSON 使用 `schema_version: 1`，只包含 agent、status、timestamp 與 Markdown 檔案路徑，不包含 pane 原文或敏感認證資訊。
+
 更新設定範例前會先備份現有設定：
 
 ~~~bash

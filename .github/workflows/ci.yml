@@ -1,0 +1,24 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Install test tools
+        run: sudo apt-get update && sudo apt-get install -y tmux shellcheck
+      - name: Shell syntax and smoke tests
+        run: ./tests/smoke.sh
+      - name: Shellcheck
+        run: shellcheck --severity=error install.sh scripts/*.sh scripts/agent-bridge tests/*.sh
+      - name: Secret pattern scan
+        run: |
+          ! grep -RInE 'AKIA[0-9A-Z]{16}|BEGIN (RSA|OPENSSH|EC) PRIVATE KEY|api[_-]?key[[:space:]]*[:=]|password[[:space:]]*[:=]' \
+            --exclude-dir=.git --exclude-dir=.ai-bridge .
