@@ -9,6 +9,9 @@
 5. Confirm `.ai-bridge/` remains ignored.
 6. Commit with a short imperative message.
 
+Run `tests/smoke.sh` before opening a change. It does not create a tmux session and is safe
+to run in CI; use a disposable project for full tmux lifecycle testing.
+
 ## Runtime adapter rules
 
 Adapters must not send messages to the orchestrator pane. Completion is reported by an

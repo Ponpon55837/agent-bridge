@@ -47,6 +47,13 @@ duplicate panes. Use a unique session name when working on multiple projects.
 client or attaches from outside tmux. `kill` asks for confirmation unless `--force` is
 provided. `rename` validates names and refuses to overwrite an existing session.
 
+## Verify the installation
+
+```bash
+./tests/smoke.sh
+./scripts/agent-bridge validate
+```
+
 ## Project integration
 
 Agent Bridge does not copy its scripts into the target project. The target receives only
