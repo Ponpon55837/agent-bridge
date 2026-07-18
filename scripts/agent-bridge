@@ -6,6 +6,10 @@ usage() {
 Usage: agent-bridge <command> [options]
 
 Commands:
+  setup       Prepare the current project for Agent Bridge
+  up          Start the default workflow for the current project
+  down        Stop the default workflow
+  doctor      Check local prerequisites
   start       Create or reuse a tmux workflow session
   install     Add runtime ignore rules to a project
   status      Show session and runtime state
@@ -22,6 +26,28 @@ EOF
 }
 command="${1:-help}"; shift || true
 case "$command" in
+  setup)
+    project="$(pwd)"; [[ "${1:-}" == "--project" ]] && project="$2"
+    exec "$ROOT/scripts/agent-bridge-install.sh" --project "$project" --copy-config
+    ;;
+  up)
+    project="$(pwd)"; session=""; implementer="opencode"; reviewer="opencode"
+    while [[ $# -gt 0 ]]; do case "$1" in --project) project="$2"; shift 2;; --session) session="$2"; shift 2;; --implementer-runtime) implementer="$2"; shift 2;; --reviewer-runtime) reviewer="$2"; shift 2;; *) echo "unknown option: $1" >&2; exit 1;; esac; done
+    [[ -n "$session" ]] || session="$(basename "$(cd "$project" && pwd)")-ai"
+    "$ROOT/scripts/agent-bridge-install.sh" --project "$project"
+    exec "$ROOT/scripts/agent-bridge.sh" --project "$project" --session "$session" --implementer-runtime "$implementer" --reviewer-runtime "$reviewer"
+    ;;
+  down)
+    project="$(pwd)"; session="$(basename "$(pwd)")-ai"
+    while [[ $# -gt 0 ]]; do case "$1" in --project) project="$2"; shift 2;; --session) session="$2"; shift 2;; *) echo "unknown option: $1" >&2; exit 1;; esac; done
+    exec "$ROOT/scripts/agent-bridge-stop.sh" --project "$project" --session "$session"
+    ;;
+  doctor)
+    failed=0
+    for tool in tmux python3; do command -v "$tool" >/dev/null 2>&1 && echo "ok: $tool" || { echo "missing: $tool"; failed=1; }; done
+    for tool in codex opencode claude; do command -v "$tool" >/dev/null 2>&1 && echo "available: $tool" || echo "optional: $tool not installed"; done
+    exit "$failed"
+    ;;
   start) exec "$ROOT/scripts/agent-bridge.sh" "$@";;
   install) exec "$ROOT/scripts/agent-bridge-install.sh" "$@";;
   stop) exec "$ROOT/scripts/agent-bridge-stop.sh" "$@";;
