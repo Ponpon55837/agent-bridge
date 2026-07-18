@@ -262,3 +262,13 @@ agent-bridge doctor
 - [Session 管理](docs/SESSIONS.md)
 - [開發規範](docs/DEVELOPMENT.md)
 - [產品 Roadmap](ROADMAP.md)
+
+## 更新設定範例
+
+Agent Bridge 更新後若需要新版設定欄位：
+
+```bash
+agent-bridge setup --refresh-config
+```
+
+這會先備份目前設定為 `.ai-bridge.yaml.bak`，再建立新版範例。一般 `agent-bridge setup` 不會覆蓋既有設定。

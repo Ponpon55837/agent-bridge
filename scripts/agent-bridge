@@ -33,8 +33,9 @@ EOF
 command="${1:-help}"; shift || true
 case "$command" in
   setup)
-    project="$(pwd)"; [[ "${1:-}" == "--project" ]] && project="$2"
-    exec "$ROOT/scripts/agent-bridge-install.sh" --project "$project" --copy-config
+    project="$(pwd)"; refresh=""
+    while [[ $# -gt 0 ]]; do case "$1" in --project) project="$2"; shift 2;; --refresh-config) refresh="--refresh-config"; shift;; *) echo "unknown option: $1" >&2; exit 1;; esac; done
+    exec "$ROOT/scripts/agent-bridge-install.sh" --project "$project" --copy-config $refresh
     ;;
   up)
     project="$(pwd)"; session=""; extra=()
