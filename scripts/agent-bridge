@@ -68,6 +68,12 @@ case "$command" in
     failed=0
     echo "Agent Bridge 環境檢查"
     echo "系統: $(uname -s 2>/dev/null || echo unknown)"
+    case "$(uname -s 2>/dev/null || true)" in
+      MINGW*|MSYS*|CYGWIN*)
+        echo "Windows shell detected: Bash and tmux must both be available in this environment."
+        echo "推薦使用 WSL2 Ubuntu；PowerShell/CMD 不能直接執行 Agent Bridge Bash scripts."
+        ;;
+    esac
     echo "Shell: ${BASH_VERSION:+bash} ${ZSH_VERSION:+zsh}"
     echo "目前指令: ${BASH_SOURCE[0]:-agent-bridge}"
     if command -v agent-bridge >/dev/null 2>&1; then echo "ok: agent-bridge ($(command -v agent-bridge))"; else echo "找不到 agent-bridge：請重新開啟終端機，或執行 ~/.local/bin/agent-bridge doctor"; failed=1; fi
