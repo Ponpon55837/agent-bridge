@@ -69,7 +69,14 @@ command -v "$reviewer_cmd" >/dev/null 2>&1 || die "runtime not installed: $REVIE
 RUNTIME_DIR="$PROJECT_DIR/.ai-bridge"
 mkdir -p "$RUNTIME_DIR/mailbox" "$RUNTIME_DIR/state"
 if tmux has-session -t "$SESSION_NAME" 2>/dev/null; then
-  echo "Session '$SESSION_NAME' already exists. Attach with: tmux attach -t $SESSION_NAME"
+  echo "Session '$SESSION_NAME' already exists."
+  echo "Attach with: tmux attach -t $SESSION_NAME"
+  if (( ATTACH )); then
+    if [[ -n "$TMUX" ]]; then
+      exec tmux switch-client -t "$SESSION_NAME"
+    fi
+    exec tmux attach -t "$SESSION_NAME"
+  fi
   exit 0
 fi
 tmux new-session -d -s "$SESSION_NAME" -c "$PROJECT_DIR"
