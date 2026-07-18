@@ -30,6 +30,7 @@ while [[ $# -gt 0 ]]; do
     *) die "unknown option: $1" ;;
   esac
 done
+[[ -t 0 && -t 1 ]] || ATTACH=0
 [[ "$SESSION_NAME" =~ ^[A-Za-z0-9_-]+$ ]] || die "invalid session name"
 [[ "$PANE_COUNT" =~ ^[3-9][0-9]*$ ]] || die "panes must be an integer >= 3"
 [[ -n "$PROJECT_DIR" ]] || PROJECT_DIR="$BRIDGE_ROOT"
@@ -48,7 +49,17 @@ if [[ -n "$CONFIG_FILE" ]]; then
   [[ "$IMPLEMENTER_ROLE" == implementation ]] && IMPLEMENTER_ROLE="$CONFIG_IMPLEMENTER_ROLE"
   [[ "$REVIEWER_ROLE" == review ]] && REVIEWER_ROLE="$CONFIG_REVIEWER_ROLE"
 fi
+command -v tmux >/dev/null 2>&1 || die "required command not installed: tmux. Run: agent-bridge doctor"
+command -v python3 >/dev/null 2>&1 || die "required command not installed: python3. Run: agent-bridge doctor"
 [[ "$IMPLEMENTER_PANE" =~ ^[1-9][0-9]*$ && "$REVIEWER_PANE" =~ ^[1-9][0-9]*$ ]] || die "agent pane must be a positive integer"
+if [[ "$ORCHESTRATOR_RUNTIME" != none ]]; then
+  runtime_cmd="$("$SCRIPT_DIR/runtime-adapter.sh" "$ORCHESTRATOR_RUNTIME")"
+  command -v "$runtime_cmd" >/dev/null 2>&1 || die "runtime not installed: $ORCHESTRATOR_RUNTIME. Run: agent-bridge doctor"
+fi
+implementer_cmd="$("$SCRIPT_DIR/runtime-adapter.sh" "$IMPLEMENTER_RUNTIME")"
+reviewer_cmd="$("$SCRIPT_DIR/runtime-adapter.sh" "$REVIEWER_RUNTIME")"
+command -v "$implementer_cmd" >/dev/null 2>&1 || die "runtime not installed: $IMPLEMENTER_RUNTIME. Run: agent-bridge doctor"
+command -v "$reviewer_cmd" >/dev/null 2>&1 || die "runtime not installed: $REVIEWER_RUNTIME. Run: agent-bridge doctor"
 RUNTIME_DIR="$PROJECT_DIR/.ai-bridge"
 mkdir -p "$RUNTIME_DIR/mailbox" "$RUNTIME_DIR/state"
 if tmux has-session -t "$SESSION_NAME" 2>/dev/null; then
@@ -68,10 +79,6 @@ if [[ "$ORCHESTRATOR_RUNTIME" != none ]]; then
   command -v "$orchestrator_cmd" >/dev/null 2>&1 || die "runtime not installed: $ORCHESTRATOR_RUNTIME"
   tmux send-keys -t "$SESSION_NAME:0.0" "$orchestrator_cmd" Enter
 fi
-implementer_cmd="$("$SCRIPT_DIR/runtime-adapter.sh" "$IMPLEMENTER_RUNTIME")"
-reviewer_cmd="$("$SCRIPT_DIR/runtime-adapter.sh" "$REVIEWER_RUNTIME")"
-command -v "$implementer_cmd" >/dev/null 2>&1 || die "runtime not installed: $IMPLEMENTER_RUNTIME"
-command -v "$reviewer_cmd" >/dev/null 2>&1 || die "runtime not installed: $REVIEWER_RUNTIME"
 tmux send-keys -t "$SESSION_NAME:0.$IMPLEMENTER_PANE" "$implementer_cmd" Enter
 tmux send-keys -t "$SESSION_NAME:0.$REVIEWER_PANE" "$reviewer_cmd" Enter
 SUPERVISOR_SCRIPT="$SCRIPT_DIR/supervisor.sh"

@@ -37,6 +37,11 @@ case "$command" in
     while [[ $# -gt 0 ]]; do case "$1" in --project) project="$2"; shift 2;; --refresh-config) refresh="--refresh-config"; shift;; *) echo "unknown option: $1" >&2; exit 1;; esac; done
     exec "$ROOT/scripts/agent-bridge-install.sh" --project "$project" --copy-config $refresh
     ;;
+  init)
+    project="$(pwd)"
+    while [[ $# -gt 0 ]]; do case "$1" in --project) project="$2"; shift 2;; --refresh-config) refresh="--refresh-config"; shift;; *) echo "unknown option: $1" >&2; exit 1;; esac; done
+    exec "$ROOT/scripts/agent-bridge-install.sh" --project "$project" --copy-config ${refresh:-}
+    ;;
   up)
     project="$(pwd)"; session=""; extra=()
     while [[ $# -gt 0 ]]; do case "$1" in --project) project="$2"; shift 2;; --session) session="$2"; extra+=(--session "$session"); shift 2;; --implementer-runtime|--reviewer-runtime|--orchestrator-runtime|--panes) extra+=("$1" "$2"); shift 2;; *) echo "unknown option: $1" >&2; exit 1;; esac; done
@@ -92,8 +97,21 @@ case "$command" in
   rename) exec "$ROOT/scripts/agent-bridge-rename.sh" "$@";;
   kill) exec "$ROOT/scripts/agent-bridge-kill.sh" "$@";;
   validate)
+    project="$(pwd)"
+    while [[ $# -gt 0 ]]; do case "$1" in --project) project="$2"; shift 2;; *) echo "unknown option: $1" >&2; exit 1;; esac; done
     for file in "$ROOT"/scripts/*.sh "$ROOT"/scripts/agent-bridge; do bash -n "$file"; done
     [[ -f "$ROOT/.ai-bridge.example.yaml" ]] || { echo "missing example config" >&2; exit 1; }
+    project="$(cd "$project" 2>/dev/null && pwd)" || { echo "agent-bridge is not initialized for this project." >&2; echo "Missing: project directory" >&2; echo "Run: agent-bridge init" >&2; exit 1; }
+    missing=()
+    [[ -f "$project/.ai-bridge.yaml" ]] || missing+=(".ai-bridge.yaml")
+    for tool in tmux python3; do command -v "$tool" >/dev/null 2>&1 || missing+=("command $tool"); done
+    if ((${#missing[@]})); then
+      echo "agent-bridge is not initialized for this project." >&2
+      printf 'Missing: %s\n' "$(IFS=', '; echo "${missing[*]}")" >&2
+      echo "Run: agent-bridge init" >&2
+      exit 1
+    fi
+    python3 "$ROOT/scripts/config-loader.py" "$project/.ai-bridge.yaml" >/dev/null || { echo "invalid .ai-bridge.yaml" >&2; exit 1; }
     echo "validation passed"
     ;;
   help|-h|--help) usage;;
