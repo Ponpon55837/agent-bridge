@@ -1,0 +1,8 @@
+{
+  "name": "agent-bridge-tools",
+  "private": true,
+  "description": "Pinned development dependency metadata for the Agent Bridge MCP integration",
+  "devDependencies": {
+    "tmux-bridge-mcp": "0.3.0"
+  }
+}
