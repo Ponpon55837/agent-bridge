@@ -96,7 +96,7 @@ tmux send-keys -t "$SESSION_NAME:0.$IMPLEMENTER_PANE" "$implementer_cmd" Enter
 tmux send-keys -t "$SESSION_NAME:0.$REVIEWER_PANE" "$reviewer_cmd" Enter
 SUPERVISOR_SCRIPT="$SCRIPT_DIR/supervisor.sh"
 if [[ -x "$SUPERVISOR_SCRIPT" ]]; then
-  "$SUPERVISOR_SCRIPT" --session "$SESSION_NAME" --project "$PROJECT_DIR" --implementer-pane "$IMPLEMENTER_PANE" --reviewer-pane "$REVIEWER_PANE" >"$RUNTIME_DIR/state/supervisor.log" 2>&1 &
+  "$SUPERVISOR_SCRIPT" --session "$SESSION_NAME" --project "$PROJECT_DIR" --orchestrator-pane "$ORCHESTRATOR_PANE" --implementer-pane "$IMPLEMENTER_PANE" --reviewer-pane "$REVIEWER_PANE" >"$RUNTIME_DIR/state/supervisor.log" 2>&1 &
   echo $! > "$RUNTIME_DIR/state/supervisor.pid"
 fi
 printf 'session_started %s project=%s\n' "$(date +%s)" "$PROJECT_DIR" >> "$RUNTIME_DIR/state/events.log"
