@@ -48,7 +48,11 @@ case "$command" in
     if tmux has-session -t "$session" 2>/dev/null; then
       exec "$ROOT/scripts/agent-bridge-switch.sh" "$session"
     fi
-    exec "$ROOT/scripts/agent-bridge.sh" --project "$project" "${extra[@]}"
+    if ((${#extra[@]} > 0)); then
+      exec "$ROOT/scripts/agent-bridge.sh" --project "$project" "${extra[@]}"
+    else
+      exec "$ROOT/scripts/agent-bridge.sh" --project "$project" --session "$session"
+    fi
     ;;
   down)
     project="$(pwd)"; session="$(basename "$(pwd)")-ai"
