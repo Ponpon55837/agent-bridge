@@ -6,16 +6,26 @@ on:
 
 jobs:
   checks:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.x'
       - name: Install test tools
+        if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y tmux shellcheck
+      - name: Install test tools on macOS
+        if: runner.os == 'macOS'
+        run: brew install tmux shellcheck
       - name: Shell syntax and smoke tests
         run: ./tests/smoke.sh
+      - name: Verify npm lockfile
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund && git diff --exit-code package.json package-lock.json
       - name: Shellcheck
         run: shellcheck --severity=error install.sh scripts/*.sh scripts/agent-bridge tests/*.sh
       - name: Secret pattern scan
