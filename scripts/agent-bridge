@@ -41,6 +41,9 @@ case "$command" in
     while [[ $# -gt 0 ]]; do case "$1" in --project) project="$2"; shift 2;; --session) session="$2"; shift 2;; --implementer-runtime) implementer="$2"; shift 2;; --reviewer-runtime) reviewer="$2"; shift 2;; *) echo "unknown option: $1" >&2; exit 1;; esac; done
     [[ -n "$session" ]] || session="$(basename "$(cd "$project" && pwd)")-ai"
     "$ROOT/scripts/agent-bridge-install.sh" --project "$project"
+    if tmux has-session -t "$session" 2>/dev/null; then
+      exec "$ROOT/scripts/agent-bridge-switch.sh" "$session"
+    fi
     exec "$ROOT/scripts/agent-bridge.sh" --project "$project" --session "$session" --implementer-runtime "$implementer" --reviewer-runtime "$reviewer"
     ;;
   down)
