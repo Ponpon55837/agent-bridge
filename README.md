@@ -56,7 +56,7 @@ agent-bridge setup
 agent-bridge up
 ```
 
-`up` 會依專案資料夾名稱自動建立 session，例如專案叫 `Lucky50`，session 預設會叫 `Lucky50-ai`。
+`up` 會依專案資料夾名稱自動建立 session，例如專案叫 `Lucky50`，session 預設會叫 `Lucky50-ai`，並在建立後直接進入 tmux 畫面。
 如果 session 已經存在，`up` 會直接進入既有 session，不會重複建立 pane。
 
 ## 啟動後怎麼使用

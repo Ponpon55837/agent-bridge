@@ -12,6 +12,7 @@ PANE_COUNT=3
 IMPLEMENTER_RUNTIME="opencode"
 REVIEWER_RUNTIME="opencode"
 ORCHESTRATOR_RUNTIME="codex"
+ATTACH=1
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BRIDGE_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 die() { echo "agent-bridge: $*" >&2; exit 1; }
@@ -24,6 +25,7 @@ while [[ $# -gt 0 ]]; do
     --implementer-runtime) [[ $# -ge 2 ]] || die "--implementer-runtime requires a value"; IMPLEMENTER_RUNTIME="$2"; shift 2 ;;
     --reviewer-runtime) [[ $# -ge 2 ]] || die "--reviewer-runtime requires a value"; REVIEWER_RUNTIME="$2"; shift 2 ;;
     --orchestrator-runtime) [[ $# -ge 2 ]] || die "--orchestrator-runtime requires a value"; ORCHESTRATOR_RUNTIME="$2"; shift 2 ;;
+    --detach) ATTACH=0; shift ;;
     -h|--help) echo "Usage: $0 [--session NAME] [--project DIR]"; exit 0 ;;
     *) die "unknown option: $1" ;;
   esac
@@ -80,3 +82,6 @@ fi
 printf 'session_started %s project=%s\n' "$(date +%s)" "$PROJECT_DIR" >> "$RUNTIME_DIR/state/events.log"
 echo "READY session=$SESSION_NAME project=$PROJECT_DIR panes=$PANE_COUNT orchestrator=$ORCHESTRATOR_RUNTIME implementer=$IMPLEMENTER_RUNTIME reviewer=$REVIEWER_RUNTIME"
 echo "Attach with: tmux attach -t $SESSION_NAME"
+if (( ATTACH )); then
+  exec tmux attach -t "$SESSION_NAME"
+fi
