@@ -13,7 +13,7 @@ PANE_COUNT=3
 IMPLEMENTER_RUNTIME="opencode"
 REVIEWER_RUNTIME="opencode"
 ORCHESTRATOR_RUNTIME="codex"
-ATTACH=1
+ATTACH=0
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BRIDGE_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 die() { echo "agent-bridge: $*" >&2; exit 1; }
@@ -27,11 +27,11 @@ while [[ $# -gt 0 ]]; do
     --reviewer-runtime) [[ $# -ge 2 ]] || die "--reviewer-runtime requires a value"; REVIEWER_RUNTIME="$2"; shift 2 ;;
     --orchestrator-runtime) [[ $# -ge 2 ]] || die "--orchestrator-runtime requires a value"; ORCHESTRATOR_RUNTIME="$2"; shift 2 ;;
     --detach) ATTACH=0; shift ;;
+    --attach) ATTACH=1; shift ;;
     -h|--help) echo "Usage: $0 [--session NAME] [--project DIR]"; exit 0 ;;
     *) die "unknown option: $1" ;;
   esac
 done
-[[ -t 0 && -t 1 ]] || ATTACH=0
 [[ "$SESSION_NAME" =~ ^[A-Za-z0-9_-]+$ ]] || die "invalid session name"
 [[ "$PANE_COUNT" =~ ^[3-9][0-9]*$ ]] || die "panes must be an integer >= 3"
 [[ -n "$PROJECT_DIR" ]] || PROJECT_DIR="$BRIDGE_ROOT"

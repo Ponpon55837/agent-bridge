@@ -16,7 +16,7 @@ Commands:
   up          Start the default workflow for the current project
   down        Stop the default workflow
   doctor      Check local prerequisites, runtimes, and MCP bridge tooling
-  start       Create or reuse a tmux workflow session
+  start       Create or reuse a detached tmux workflow session
   install     Add runtime ignore rules to a project
   status      Show session and runtime state
   stop        Stop the supervisor and tmux session

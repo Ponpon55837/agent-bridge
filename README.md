@@ -127,11 +127,23 @@ agent-bridge up
 
 啟動前會檢查專案、設定、tmux、python3 與設定中使用的 runtime。檢查失敗會停止，不會偷偷改用手動 tmux。
 
-互動式終端會自動 attach；non-TTY 環境則會印出 session 名稱與 attach 指令：
+預設會在背景建立 session，不會接管目前終端。成功後會清楚印出 session 名稱與 attach 指令：
 
 ~~~text
 READY session=... panes=3 ...
 Attach with: tmux attach -t <session>
+~~~
+
+需要直接進入 tmux 畫面時，明確加上 attach：
+
+~~~bash
+agent-bridge start --project /path/to/your-project --attach
+~~~
+
+或稍後手動進入：
+
+~~~bash
+agent-bridge switch <session-name>
 ~~~
 
 未初始化時會明確顯示根因與修復命令：
