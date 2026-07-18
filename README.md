@@ -114,6 +114,35 @@ agent-bridge up \
 
 支援 runtime：codex、opencode、claude、shell。修改 pane 數量或角色後，先停止既有 session；設定不會自動重建現有 pane。
 
+完整設定可以明確列出 orchestrator，並要求交接內容：
+
+~~~yaml
+agents:
+  - id: codex
+    runtime: codex
+    pane: 0
+    role: orchestrator
+  - id: implementer
+    runtime: opencode
+    pane: 1
+    role: implementation
+  - id: reviewer
+    runtime: opencode
+    pane: 2
+    role: review
+
+workflow:
+  notification: mailbox
+  require_local_verification: true
+  handoff_format:
+    implementation_summary: required
+    changed_files: required
+    verification_result: required
+    reviewer_status: required
+~~~
+
+orchestrator pane 必須是唯一且小於 pane_count；啟動器會在建立 tmux session 前檢查 pane 配置。
+
 ~~~text
 .ai-bridge.yaml       # 共用設定，可提交
 .ai-bridge/            # mailbox、PID、log、事件；不提交

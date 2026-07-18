@@ -6,6 +6,7 @@ PROJECT_DIR=""
 CONFIG_FILE=""
 IMPLEMENTER_PANE=1
 REVIEWER_PANE=2
+ORCHESTRATOR_PANE=0
 IMPLEMENTER_ROLE="implementation"
 REVIEWER_ROLE="review"
 PANE_COUNT=3
@@ -44,6 +45,7 @@ if [[ -n "$CONFIG_FILE" ]]; then
   [[ "$IMPLEMENTER_RUNTIME" == opencode ]] && IMPLEMENTER_RUNTIME="$CONFIG_IMPLEMENTER_RUNTIME"
   [[ "$REVIEWER_RUNTIME" == opencode ]] && REVIEWER_RUNTIME="$CONFIG_REVIEWER_RUNTIME"
   [[ "$ORCHESTRATOR_RUNTIME" == codex ]] && ORCHESTRATOR_RUNTIME="$CONFIG_ORCHESTRATOR_RUNTIME"
+  [[ "$ORCHESTRATOR_PANE" == 0 ]] && ORCHESTRATOR_PANE="$CONFIG_ORCHESTRATOR_PANE"
   [[ "$IMPLEMENTER_PANE" == 1 ]] && IMPLEMENTER_PANE="$CONFIG_IMPLEMENTER_PANE"
   [[ "$REVIEWER_PANE" == 2 ]] && REVIEWER_PANE="$CONFIG_REVIEWER_PANE"
   [[ "$IMPLEMENTER_ROLE" == implementation ]] && IMPLEMENTER_ROLE="$CONFIG_IMPLEMENTER_ROLE"
@@ -53,7 +55,9 @@ command -v tmux >/dev/null 2>&1 || die "required command not installed: tmux. Ru
 command -v python3 >/dev/null 2>&1 || die "required command not installed: python3. Run: agent-bridge doctor"
 command -v node >/dev/null 2>&1 || die "required command not installed: node (Node.js 18+ required by tmux-bridge-mcp). Run: agent-bridge doctor"
 command -v npx >/dev/null 2>&1 || die "required command not installed: npx (required by tmux-bridge-mcp). Run: agent-bridge doctor"
-[[ "$IMPLEMENTER_PANE" =~ ^[1-9][0-9]*$ && "$REVIEWER_PANE" =~ ^[1-9][0-9]*$ ]] || die "agent pane must be a positive integer"
+[[ "$ORCHESTRATOR_PANE" =~ ^[0-9]+$ && "$IMPLEMENTER_PANE" =~ ^[0-9]+$ && "$REVIEWER_PANE" =~ ^[0-9]+$ ]] || die "agent panes must be integers"
+(( ORCHESTRATOR_PANE < PANE_COUNT && IMPLEMENTER_PANE < PANE_COUNT && REVIEWER_PANE < PANE_COUNT )) || die "agent pane is outside pane_count"
+[[ "$ORCHESTRATOR_PANE" != "$IMPLEMENTER_PANE" && "$ORCHESTRATOR_PANE" != "$REVIEWER_PANE" && "$IMPLEMENTER_PANE" != "$REVIEWER_PANE" ]] || die "agent panes must be unique"
 if [[ "$ORCHESTRATOR_RUNTIME" != none ]]; then
   runtime_cmd="$("$SCRIPT_DIR/runtime-adapter.sh" "$ORCHESTRATOR_RUNTIME")"
   command -v "$runtime_cmd" >/dev/null 2>&1 || die "runtime not installed: $ORCHESTRATOR_RUNTIME. Run: agent-bridge doctor"
@@ -73,13 +77,13 @@ tmux split-window -h -t "$SESSION_NAME:0" -c "$PROJECT_DIR"
 tmux split-window -v -t "$SESSION_NAME:0.0" -c "$PROJECT_DIR"
 for ((pane=3; pane<PANE_COUNT; pane++)); do tmux split-window -v -t "$SESSION_NAME:0.0" -c "$PROJECT_DIR"; done
 tmux select-layout -t "$SESSION_NAME:0" tiled
-tmux select-pane -t "$SESSION_NAME:0.0" -T orchestrator
+tmux select-pane -t "$SESSION_NAME:0.$ORCHESTRATOR_PANE" -T orchestrator
 tmux select-pane -t "$SESSION_NAME:0.$IMPLEMENTER_PANE" -T "$IMPLEMENTER_ROLE"
 tmux select-pane -t "$SESSION_NAME:0.$REVIEWER_PANE" -T "$REVIEWER_ROLE"
 if [[ "$ORCHESTRATOR_RUNTIME" != none ]]; then
   orchestrator_cmd="$("$SCRIPT_DIR/runtime-adapter.sh" "$ORCHESTRATOR_RUNTIME")"
   command -v "$orchestrator_cmd" >/dev/null 2>&1 || die "runtime not installed: $ORCHESTRATOR_RUNTIME"
-  tmux send-keys -t "$SESSION_NAME:0.0" "$orchestrator_cmd" Enter
+  tmux send-keys -t "$SESSION_NAME:0.$ORCHESTRATOR_PANE" "$orchestrator_cmd" Enter
 fi
 tmux send-keys -t "$SESSION_NAME:0.$IMPLEMENTER_PANE" "$implementer_cmd" Enter
 tmux send-keys -t "$SESSION_NAME:0.$REVIEWER_PANE" "$reviewer_cmd" Enter

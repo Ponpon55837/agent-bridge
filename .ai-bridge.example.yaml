@@ -8,6 +8,10 @@ session:
   pane_count: 3
 
 agents:
+  - id: codex
+    runtime: codex
+    pane: 0
+    role: orchestrator
   - id: implementer
     runtime: opencode
     pane: 1
@@ -20,3 +24,8 @@ agents:
 workflow:
   notification: mailbox
   require_local_verification: true
+  handoff_format:
+    implementation_summary: required
+    changed_files: required
+    verification_result: required
+    reviewer_status: required
