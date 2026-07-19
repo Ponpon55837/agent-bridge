@@ -44,13 +44,26 @@ if codex_block:
     role_value = re.search(r"(?m)^\s+role:\s*([^#\n]+)", codex_block)
     values["CONFIG_ORCHESTRATOR_PANE"] = pane.group(1).strip() if pane else "0"
     values["CONFIG_ORCHESTRATOR_ROLE"] = role_value.group(1).strip().strip("'\"") if role_value else "orchestrator"
-for role, agent_id, default in (("IMPLEMENTER", "implementer", "opencode"), ("REVIEWER", "reviewer", "opencode")):
-    agent_block = block(agent_id)
+def agent_block_for(agent_id, legacy_id=None):
+    result = block(agent_id)
+    if result or not legacy_id:
+        return result
+    return block(legacy_id)
+
+for role, agent_id, legacy_id, default_pane, default_runtime in (
+    ("IMPLEMENTER_A", "implementer-a", "implementer", "1", "opencode"),
+    ("IMPLEMENTER_B", "implementer-b", None, "", "opencode"),
+    ("REVIEWER", "reviewer", None, "2", "opencode"),
+):
+    agent_block = agent_block_for(agent_id, legacy_id)
     runtime = re.search(r"(?m)^\s+runtime:\s*([^#\n]+)", agent_block) if agent_block else None
-    values[f"CONFIG_{role}_RUNTIME"] = runtime.group(1).strip().strip("'\"") if runtime else default
+    values[f"CONFIG_{role}_RUNTIME"] = runtime.group(1).strip().strip("'\"") if runtime else default_runtime
     pane = re.search(r"(?m)^\s+pane:\s*([^#\n]+)", agent_block) if agent_block else None
     role_value = re.search(r"(?m)^\s+role:\s*([^#\n]+)", agent_block) if agent_block else None
-    values[f"CONFIG_{role}_PANE"] = pane.group(1).strip() if pane else ("1" if role == "IMPLEMENTER" else "2")
+    values[f"CONFIG_{role}_PANE"] = pane.group(1).strip() if pane else default_pane
     values[f"CONFIG_{role}_ROLE"] = role_value.group(1).strip().strip("'\"") if role_value else role.lower()
+values["CONFIG_IMPLEMENTER_ROLE"] = values["CONFIG_IMPLEMENTER_A_ROLE"]
+values["CONFIG_IMPLEMENTER_PANE"] = values["CONFIG_IMPLEMENTER_A_PANE"]
+values["CONFIG_IMPLEMENTER_RUNTIME"] = values["CONFIG_IMPLEMENTER_A_RUNTIME"]
 for key, value in values.items():
     print(f"{key}={shlex.quote(value)}")

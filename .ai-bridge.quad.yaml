@@ -1,11 +1,11 @@
 project:
-  name: example
+  name: quad-example
   root: .
   orchestrator_runtime: codex
 
 session:
-  name: agent-bridge-dev
-  pane_count: 3
+  name: quad-ai
+  pane_count: 4
 
 agents:
   - id: codex
@@ -15,17 +15,16 @@ agents:
   - id: implementer-a
     runtime: opencode
     pane: 1
-    role: implementation
+    role: implementation-a
+  - id: implementer-b
+    runtime: opencode
+    pane: 2
+    role: implementation-b
   - id: reviewer
     runtime: claude
-    pane: 2
+    pane: 3
     role: review
 
 workflow:
   notification: mailbox
   require_local_verification: true
-  handoff_format:
-    implementation_summary: required
-    changed_files: required
-    verification_result: required
-    reviewer_status: required

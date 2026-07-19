@@ -31,5 +31,13 @@ if (( COPY_CONFIG )) && [[ ! -e "$PROJECT_DIR/.ai-bridge.yaml" ]]; then
 elif [[ -e "$PROJECT_DIR/.ai-bridge.yaml" && $REFRESH_CONFIG -eq 0 ]]; then
   echo "設定已存在，未覆蓋：$PROJECT_DIR/.ai-bridge.yaml"
 fi
+if (( COPY_CONFIG )); then
+  for sample in .ai-bridge.dual.yaml .ai-bridge.quad.yaml; do
+    if [[ ! -e "$PROJECT_DIR/$sample" && -e "$ROOT/$sample" ]]; then
+      cp "$ROOT/$sample" "$PROJECT_DIR/$sample"
+      echo "已建立範例設定：$PROJECT_DIR/$sample"
+    fi
+  done
+fi
 mkdir -p "$PROJECT_DIR/.ai-bridge/mailbox" "$PROJECT_DIR/.ai-bridge/state"
 echo "INSTALLED project=$PROJECT_DIR"

@@ -2,12 +2,15 @@
 set -euo pipefail
 umask 077
 SESSION_NAME="agent-bridge-dev"; PROJECT_DIR=""
-IMPLEMENTER_PANE=1; REVIEWER_PANE=2; ORCHESTRATOR_PANE=0
+PANE_COUNT=3; IMPLEMENTER_A_PANE=1; IMPLEMENTER_B_PANE=""; REVIEWER_PANE=""; ORCHESTRATOR_PANE=0; LEGACY_IMPLEMENTER_PANE=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --session) [[ $# -ge 2 ]] || exit 1; SESSION_NAME="$2"; shift 2 ;;
     --project) [[ $# -ge 2 ]] || exit 1; PROJECT_DIR="$2"; shift 2 ;;
-    --implementer-pane) [[ $# -ge 2 ]] || exit 1; IMPLEMENTER_PANE="$2"; shift 2 ;;
+    --pane-count) [[ $# -ge 2 ]] || exit 1; PANE_COUNT="$2"; shift 2 ;;
+    --implementer-a-pane) [[ $# -ge 2 ]] || exit 1; IMPLEMENTER_A_PANE="$2"; shift 2 ;;
+    --implementer-b-pane) [[ $# -ge 2 ]] || exit 1; IMPLEMENTER_B_PANE="$2"; shift 2 ;;
+    --implementer-pane) [[ $# -ge 2 ]] || exit 1; LEGACY_IMPLEMENTER_PANE="$2"; shift 2 ;;
     --reviewer-pane) [[ $# -ge 2 ]] || exit 1; REVIEWER_PANE="$2"; shift 2 ;;
     --orchestrator-pane) [[ $# -ge 2 ]] || exit 1; ORCHESTRATOR_PANE="$2"; shift 2 ;;
     -h|--help) echo "Usage: $0 [--session NAME] [--project DIR]"; exit 0 ;;
@@ -15,8 +18,18 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 [[ "$SESSION_NAME" =~ ^[A-Za-z0-9_-]+$ ]] || { echo "invalid session" >&2; exit 1; }
-[[ "$ORCHESTRATOR_PANE" =~ ^[0-9]+$ && "$IMPLEMENTER_PANE" =~ ^[0-9]+$ && "$REVIEWER_PANE" =~ ^[0-9]+$ ]] || { echo "invalid agent pane" >&2; exit 1; }
+[[ -z "$LEGACY_IMPLEMENTER_PANE" || "$IMPLEMENTER_A_PANE" == 1 ]] || { echo "implementer pane options conflict" >&2; exit 1; }
+[[ -z "$LEGACY_IMPLEMENTER_PANE" ]] || IMPLEMENTER_A_PANE="$LEGACY_IMPLEMENTER_PANE"
+[[ "$PANE_COUNT" =~ ^[234]$ ]] || { echo "pane-count must be 2, 3, or 4" >&2; exit 1; }
+[[ "$ORCHESTRATOR_PANE" =~ ^[0-9]+$ && "$IMPLEMENTER_A_PANE" =~ ^[0-9]+$ ]] || { echo "invalid required agent pane" >&2; exit 1; }
+case "$PANE_COUNT" in
+  2) [[ -z "$IMPLEMENTER_B_PANE" && -z "$REVIEWER_PANE" ]] || { echo "invalid 2-pane configuration" >&2; exit 1; };;
+  3) [[ -z "$IMPLEMENTER_B_PANE" ]] || { echo "invalid 3-pane configuration" >&2; exit 1; }; [[ -n "$REVIEWER_PANE" ]] || REVIEWER_PANE=2;;
+  4) [[ "$IMPLEMENTER_B_PANE" =~ ^[0-9]+$ && "$REVIEWER_PANE" =~ ^[0-9]+$ ]] || { echo "invalid 4-pane configuration" >&2; exit 1; };;
+esac
+for pane in "$ORCHESTRATOR_PANE" "$IMPLEMENTER_A_PANE" "$IMPLEMENTER_B_PANE" "$REVIEWER_PANE"; do [[ -z "$pane" ]] || { (( pane < PANE_COUNT )) || exit 1; }; done
 [[ -n "$PROJECT_DIR" ]] || PROJECT_DIR="$(pwd)"
+IMPLEMENTER_PANE="$IMPLEMENTER_A_PANE"
 PROJECT_DIR="$(cd "$PROJECT_DIR" 2>/dev/null && pwd)" || exit 1
 RUNTIME_DIR="$PROJECT_DIR/.ai-bridge"; MAILBOX_DIR="$RUNTIME_DIR/mailbox"; STATE_DIR="$RUNTIME_DIR/state"
 mkdir -p "$MAILBOX_DIR" "$STATE_DIR"; EVENTS_LOG="$STATE_DIR/events.log"; HEARTBEAT="$STATE_DIR/.supervisor-heartbeat"; WORKFLOW_STATE="$STATE_DIR/workflow.json"
@@ -45,8 +58,19 @@ write_workflow_state() {
     review_complete) next_action="orchestrator_decision";;
     *) next_action="orchestrator_follow_up";;
   esac
-  python3 -c 'import json,sys; print(json.dumps({"schema_version":1,"agent":sys.argv[1],"status":sys.argv[2],"timestamp":int(sys.argv[3]),"next_action":sys.argv[4]}, ensure_ascii=False))' \
-    "$agent_id" "$status" "$ts" "$next_action" > "$tmp" && mv -f "$tmp" "$file"
+  python3 - "$file" "$agent_id" "$status" "$ts" "$next_action" <<'PY' > "$tmp"
+import json, sys
+path, agent, status, timestamp, next_action = sys.argv[1:]
+try:
+    state = json.load(open(path, encoding="utf-8"))
+except (OSError, ValueError):
+    state = {"schema_version": 2, "agents": {}}
+state["schema_version"] = 2
+state.setdefault("agents", {})[agent] = {"status": status, "timestamp": int(timestamp)}
+state["next_action"] = next_action
+print(json.dumps(state, ensure_ascii=False))
+PY
+  mv -f "$tmp" "$file"
   record_event "workflow: agent=$agent_id status=$status next=$next_action"
 }
 notify_pane() {
@@ -67,12 +91,13 @@ hash_text() {
   else cksum
   fi
 }
-last_hash1=""; last_hash2=""; notified_hash1=""; notified_hash2=""
+last_hash1=""; last_hash2=""; last_hash3=""; notified_hash1=""; notified_hash2=""; notified_hash3=""
 record_event "supervisor_started session=$SESSION_NAME project=$PROJECT_DIR"
 while tmux has-session -t "$SESSION_NAME" 2>/dev/null; do
   touch "$HEARTBEAT"
   pane1="$(tmux capture-pane -t "$SESSION_NAME:0.$IMPLEMENTER_PANE" -p -S -500 2>/dev/null || true)"
-  pane2="$(tmux capture-pane -t "$SESSION_NAME:0.$REVIEWER_PANE" -p -S -500 2>/dev/null || true)"
+  pane2=""; [[ -z "$REVIEWER_PANE" ]] || pane2="$(tmux capture-pane -t "$SESSION_NAME:0.$REVIEWER_PANE" -p -S -500 2>/dev/null || true)"
+  pane3=""; [[ -z "$IMPLEMENTER_B_PANE" ]] || pane3="$(tmux capture-pane -t "$SESSION_NAME:0.$IMPLEMENTER_B_PANE" -p -S -500 2>/dev/null || true)"
   hash1="$(printf '%s' "$pane1" | hash_text | cut -d' ' -f1)"; hash2="$(printf '%s' "$pane2" | hash_text | cut -d' ' -f1)"
   if [[ "$hash1" != "$last_hash1" ]] && { grep -qE '\[(opencode-1|agent-1) 完成通知\]' <<<"$pane1" || valid_handoff "$pane1"; }; then
     write_mailbox agent-1 ready_for_review "$pane1"
@@ -88,6 +113,17 @@ while tmux has-session -t "$SESSION_NAME" 2>/dev/null; do
       notified_hash2="$hash2"
     fi
   fi
-  last_hash1="$hash1"; last_hash2="$hash2"; sleep 3
+  if [[ -n "$IMPLEMENTER_B_PANE" ]]; then
+    hash3="$(printf '%s' "$pane3" | hash_text | cut -d' ' -f1)"
+    if [[ "$hash3" != "$last_hash3" ]] && valid_handoff "$pane3"; then
+      write_mailbox agent-3 ready_for_review "$pane3"
+      if [[ "$hash3" != "$notified_hash3" ]]; then
+        if [[ -n "$REVIEWER_PANE" ]]; then notify_pane "$REVIEWER_PANE" "HANDOFF from implementer-b: inspect its changed files and verification, then report APPROVED or CHANGES_REQUESTED to Codex."; else notify_pane "$ORCHESTRATOR_PANE" "HANDOFF from implementer-b: no reviewer is configured; inspect the mailbox and explicitly decide the next action."; fi
+        notified_hash3="$hash3"
+      fi
+    fi
+    last_hash3="$hash3"
+  fi
+  last_hash1="$hash1"; last_hash2="$hash2"; [[ "$PANE_COUNT" == 4 ]] && sleep 4 || sleep 3
 done
 record_event supervisor_stopped

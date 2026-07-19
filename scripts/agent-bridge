@@ -29,7 +29,7 @@ Commands:
   kill        Kill one exact session (confirmation required)
   uninstall   Dry-run removal; use --force to remove runtime state
   validate    Run shell syntax and configuration checks
-  (start also accepts --panes, --preset, --implementer-runtime, and --reviewer-runtime)
+  (start/up also accepts --config, --panes, --preset, --implementer-runtime, and --reviewer-runtime)
   help        Show this help
 EOF
 }
@@ -46,15 +46,33 @@ case "$command" in
     exec "$ROOT/scripts/agent-bridge-install.sh" --project "$project" --copy-config ${refresh:-}
     ;;
   up)
-    project="$(pwd)"; session=""; extra=()
+    project="$(pwd)"; session=""; config=""; requested_panes=""; extra=()
     [[ -t 0 && -t 1 ]] && extra+=(--attach)
-    while [[ $# -gt 0 ]]; do case "$1" in --project) project="$2"; shift 2;; --session) session="$2"; extra+=(--session "$session"); shift 2;; --implementer-runtime|--reviewer-runtime|--orchestrator-runtime|--panes|--preset) extra+=("$1" "$2"); shift 2;; *) echo "unknown option: $1" >&2; exit 1;; esac; done
+    while [[ $# -gt 0 ]]; do case "$1" in --project) project="$2"; shift 2;; --config) config="$2"; extra+=(--config "$2"); shift 2;; --session) session="$2"; extra+=(--session "$session"); shift 2;; --panes) requested_panes="$2"; extra+=(--panes "$2"); shift 2;; --implementer-runtime|--reviewer-runtime|--orchestrator-runtime|--preset) extra+=("$1" "$2"); shift 2;; *) echo "unknown option: $1" >&2; exit 1;; esac; done
     "$ROOT/scripts/agent-bridge-install.sh" --project "$project"
-    if [[ -z "$session" && -f "$project/.ai-bridge.yaml" ]]; then
+    if [[ -z "$session" && -n "$config" ]]; then
+      [[ -f "$config" ]] || { [[ -f "$project/$config" ]] && config="$project/$config"; }
+      [[ -f "$config" ]] || { echo "config file does not exist: $config" >&2; exit 1; }
+      session="$(python3 "$ROOT/scripts/config-loader.py" "$config" | sed -n 's/^CONFIG_SESSION=//p' | sed "s/^'//; s/'$//")"
+    elif [[ -z "$session" && -f "$project/.ai-bridge.yaml" ]]; then
       session="$(python3 "$ROOT/scripts/config-loader.py" "$project/.ai-bridge.yaml" | sed -n 's/^CONFIG_SESSION=//p' | sed "s/^'//; s/'$//")"
     fi
     [[ -n "$session" ]] || session="$(basename "$(cd "$project" && pwd)")-ai"
     if tmux has-session -t "$session" 2>/dev/null; then
+      expected_panes="$requested_panes"
+      if [[ -z "$expected_panes" ]]; then
+        if [[ -n "$config" ]]; then
+          expected_panes="$(python3 "$ROOT/scripts/config-loader.py" "$config" | sed -n 's/^CONFIG_PANES=//p' | sed "s/^'//; s/'$//")"
+        elif [[ -f "$project/.ai-bridge.yaml" ]]; then
+          expected_panes="$(python3 "$ROOT/scripts/config-loader.py" "$project/.ai-bridge.yaml" | sed -n 's/^CONFIG_PANES=//p' | sed "s/^'//; s/'$//")"
+        fi
+      fi
+      actual_panes="$(tmux list-panes -t "$session:0" 2>/dev/null | wc -l | tr -d ' ')"
+      if [[ -n "$expected_panes" && "$actual_panes" != "$expected_panes" ]]; then
+        echo "session '$session' has $actual_panes panes, requested $expected_panes panes." >&2
+        echo "Stop the existing session before switching pane topology: agent-bridge down --session $session" >&2
+        exit 1
+      fi
       exec "$ROOT/scripts/agent-bridge-switch.sh" "$session"
     fi
     if ((${#extra[@]} > 0)); then

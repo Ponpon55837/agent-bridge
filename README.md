@@ -1,14 +1,24 @@
 # Agent Bridge
 
-Agent Bridge 是可導入多個專案的 tmux 多代理工作流。它建立三個 pane：
+Agent Bridge 是可導入多個專案的 tmux 多代理工作流。它依設定建立 2、3 或 4 個 pane：
 
 跨 pane 溝通使用 [tmux-bridge-mcp](https://github.com/howardpen9/tmux-bridge-mcp)。Agent Bridge 負責建立 pane；tmux-bridge-mcp 負責讓 Codex、Claude Code、OpenCode 等 MCP client 讀取與傳送訊息。兩者缺一不可。
 
 | Pane | 角色 | 預設 runtime |
 | --- | --- | --- |
 | 0 | orchestrator | Codex |
-| 1 | implementer | OpenCode |
-| 2 | reviewer | Claude |
+| 1 | implementer-a | OpenCode |
+| 2 | reviewer 或 implementer-b | OpenCode/Claude |
+| 3 | reviewer（4 pane） | Claude |
+
+固定拓撲與切換方式請看 [Session 管理](docs/SESSIONS.md)。可直接使用：
+
+~~~bash
+agent-bridge up --config .ai-bridge.dual.yaml
+agent-bridge up --config .ai-bridge.quad.yaml
+~~~
+
+2 pane 沒有 reviewer；實作者完成後會直接通知 orchestrator。4 pane 會啟動兩個獨立 implementer，兩者都必須有自己的任務與回報。
 
 ## 快速開始：只需要 setup 一次、up 一次
 
@@ -121,7 +131,7 @@ agent-bridge validate
 
 setup 會建立 .ai-bridge.yaml、runtime 目錄與必要的 .gitignore 區塊。插件已安裝不代表專案已初始化；validate 是啟動前的必要檢查。跨 pane 溝通另外需要先完成 tmux-bridge-mcp 設定。
 
-新專案的 session 會依目錄名稱自動命名，例如 Lucky50 會使用 Lucky50-ai，避免不同專案共用 agent-bridge-dev 而互相干擾。若設定檔已存在，setup 不會覆蓋其中的 session name。
+新專案的 session 會依目錄名稱自動命名，例如專案目錄 my-project 會使用 my-project-ai，避免不同專案共用 agent-bridge-dev 而互相干擾。若設定檔已存在，setup 不會覆蓋其中的 session name。
 
 ### 啟動
 
@@ -208,9 +218,9 @@ agent-bridge doctor
 ## 多專案
 
 ~~~bash
-agent-bridge up --project /projects/lucky50 --session lucky50-ai
+agent-bridge up --project /projects/my-project --session my-project-ai
 agent-bridge up --project /projects/shop --session shop-ai
-tmux attach -t lucky50-ai
+tmux attach -t my-project-ai
 ~~~
 
 ## 設定 runtime 與 pane
