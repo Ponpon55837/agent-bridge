@@ -4,3 +4,4 @@
 .mcp.json
 *.swp
 .DS_Store
+node_modules
